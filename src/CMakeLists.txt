@@ -1,6 +1,7 @@
 # add sources
 SET(Project_SRCS
-  connection.cpp
+  base_connection.cpp
+  server_connection.cpp
   #gconnection.cpp
   #pconnection.cpp
   server.cpp
@@ -15,7 +16,7 @@ ADD_EXECUTABLE(Server ${Project_SRCS})
 # add sources
 SET(Project_SRCS
   client.cpp
-  connection.cpp
+  base_connection.cpp
   client_connection.cpp
   message.cpp
   message_parser.cpp

@@ -20,28 +20,32 @@
  *  SOFTWARE.
  *
  */
+#ifndef H_PixyNet_Connection_H
+#define H_PixyNet_Connection_H
 
-#include "message.hpp"
+#include "base_connection.hpp"
 
 namespace Pixy {
 namespace Net {
 
-std::vector<boost::asio::const_buffer> message::to_buffers() {
-  std::string me;
-  me.push_back((unsigned char)id);
-  me.push_back(' ');
-  me += body.size();
-  me.push_back(' ');
-  me += body;
+  /// Represents a single connection from a client.
+  class connection : public base_connection
+  {
+    public:
+      /// Construct a connection with the given io_service.
+      explicit connection(boost::asio::io_service&);
+      virtual ~connection();
 
-  std::cout << "me in string mode: " << me;
-  std::vector<boost::asio::const_buffer> buffers;
-  //buffers.push_back(boost::asio::buffer(c));
-  //buffers.push_back(boost::asio::buffer((char*)length));
-  buffers.push_back(boost::asio::buffer(me));
+      virtual boost::shared_ptr<connection> shared_from_this() {
+        return boost::static_pointer_cast<connection>(base_connection::shared_from_this());
+      }
 
-  return buffers;
-}
+    protected:
+  };
 
-}
-}
+  typedef boost::shared_ptr<connection> connection_ptr;
+
+} // namespace Net
+} // namespace Pixy
+
+#endif // H_PixyNet_Connection_H

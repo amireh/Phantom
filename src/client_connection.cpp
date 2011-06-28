@@ -1,10 +1,33 @@
+/*
+ *  Copyright (c) 2011 Ahmad Amireh <ahmad@amireh.net>
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a
+ *  copy of this software and associated documentation files (the "Software"),
+ *  to deal in the Software without restriction, including without limitation
+ *  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *  and/or sell copies of the Software, and to permit persons to whom the
+ *  Software is furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ *  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *  SOFTWARE.
+ *
+ */
+
 #include "client_connection.hpp"
 
 namespace Pixy {
 namespace Net {
 
-  client_connection::client_connection(boost::asio::io_service& io_service, std::string server, std::string port)
-    : connection(io_service),
+  connection::connection(boost::asio::io_service& io_service, std::string server, std::string port)
+    : base_connection(io_service),
       resolver_(io_service),
       host_(server),
       port_(port),
@@ -12,11 +35,11 @@ namespace Net {
   {
   }
 
-  client_connection::~client_connection() {
-    std::cout << "A client_connection has been destroyed\n";
+  connection::~connection() {
+    std::cout << "A connection has been destroyed\n";
   }
 
-  bool client_connection::connect() {
+  bool connection::connect() {
     if (connected_) {
       std::cerr << "already connected!\n";
       return true;
@@ -43,15 +66,15 @@ namespace Net {
     return connected_;
   }
 
-  bool client_connection::is_connected() {
+  bool connection::is_connected() {
     return connected_;
   }
-  void client_connection::disconnect() {
+  void connection::disconnect() {
     send(message(message_id::disconnect));
   }
 
-  void client_connection::start() {
-    connection::start();
+  void connection::start() {
+    base_connection::start();
     message foo(message_id::foo);
     foo.body = "HAI";
     send(foo);

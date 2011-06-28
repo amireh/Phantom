@@ -9,46 +9,51 @@
 #include <stdexcept>
 #include "message.hpp"
 
-class request_incomplete : public std::runtime_error {
-  public:
+namespace Pixy {
+namespace Net {
 
-  request_incomplete(std::string msg, int in_bytes_left)
-  : std::runtime_error(msg),
-    bytes_left(in_bytes_left) {
-  }
-  virtual ~request_incomplete() throw() {
-  }
+  class request_incomplete : public std::runtime_error {
+    public:
 
-  int bytes_left;
-};
+    request_incomplete(std::string msg, int in_bytes_left)
+    : std::runtime_error(msg),
+      bytes_left(in_bytes_left) {
+    }
+    virtual ~request_incomplete() throw() {
+    }
 
-class bad_request : public std::runtime_error {
-  public:
+    int bytes_left;
+  };
 
-  bad_request(std::string msg)
-  : std::runtime_error(msg) {
-  }
-  virtual ~bad_request() throw() {
-  }
+  class bad_request : public std::runtime_error {
+    public:
 
-};
+    bad_request(std::string msg)
+    : std::runtime_error(msg) {
+    }
+    virtual ~bad_request() throw() {
+    }
 
-class message_parser {
-  public:
-  typedef boost::asio::buffers_iterator<
-    boost::asio::streambuf::const_buffers_type> iterator;
+  };
 
-    message_parser();
+  class message_parser {
+    public:
+    typedef boost::asio::buffers_iterator<
+      boost::asio::streambuf::const_buffers_type> iterator;
 
-    bool parse_header(message &msg, boost::asio::streambuf& in);
-    bool parse_body(message& msg, boost::asio::streambuf& in);
-    //void parse(message &msg, boost::asio::mutable_buffer& in);
-    void dump(const message &msg, boost::asio::streambuf& out);
-    void dump(const message &msg, boost::asio::mutable_buffer& out);
+      message_parser();
 
-  private:
-    /// Handle the next character of input.
-    boost::tribool consume(message& msg, char input);
-};
+      bool parse_header(message &msg, boost::asio::streambuf& in);
+      bool parse_body(message& msg, boost::asio::streambuf& in);
+      //void parse(message &msg, boost::asio::mutable_buffer& in);
+      void dump(const message &msg, boost::asio::streambuf& out);
+      void dump(const message &msg, boost::asio::mutable_buffer& out);
 
+    private:
+      /// Handle the next character of input.
+      boost::tribool consume(message& msg, char input);
+  };
+
+}
+}
 #endif

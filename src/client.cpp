@@ -1,73 +1,45 @@
 #include "client.hpp"
 
 using boost::asio::ip::tcp;
+namespace Pixy {
+namespace Net {
 
   client::client(boost::asio::io_service& io_service)
-    : connected_(false),
-      io_service_(io_service),
-      resolver_(io_service),
-      socket_(io_service),
-      server_("127.0.0.1"),
-      port_("60100"),
-      strand_(io_service),
-      message_parser_(),
-      message_handler_(io_service, socket_),
-      request_(message::max_length),
-      response_(message::max_length),
+    : io_service_(io_service),
+      conn_(new client_connection(io_service, "127.0.0.1", "60100")),
       timer_(io_service_)
   {
-    message_handler_.bind(message_id::ping, this, &client::on_ping);
+    conn_->connect();
+    try {
+      conn_->start();
+    } catch (std::exception& e) {
+      std::cerr << "couldnt start the conn .. " << e.what() << "\n";
+      throw e;
+    }
+    /*message_handler_.bind(message_id::ping, this, &client::on_ping);
     connect();
     send_req();
-    do_read();
+    do_read();*/
 
-    //timer_.expires_from_now(boost::posix_time::seconds(5));
+    timer_.expires_from_now(boost::posix_time::seconds(2));
+    timer_.wait();
     //timer_.async_wait(boost::bind(&client::disconnect, this, boost::asio::placeholders::error));
     //send_req();
   }
 
   client::~client() {
+    conn_->stop();
+    conn_.reset();
     // stop all asynchronous ops
     //socket_.cancel();
     // initiate graceful connection closure.
-    boost::system::error_code ignored_ec;
-    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-    socket_.close();
+    //boost::system::error_code ignored_ec;
+    //socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+    //socket_.close();
   }
 
-  void client::connect() {
-    if (!connected_) {
 
-      tcp::resolver::query query(server_, "60100");
-
-      // Start a synchronous resolve
-      boost::system::error_code ec;
-      tcp::resolver::iterator endpoint = resolver_.resolve(query);
-      socket_.connect(*endpoint, ec);
-
-      if (ec) {
-        std::cerr << "couldn't connect to server, aborting\n";
-        return;
-      }
-
-      // set KEEPALIVE to true
-      socket_.set_option(boost::asio::socket_base::keep_alive(true));
-
-      std::cout << "connected!\n";
-      connected_ = true;
-
-      // Start an asynchronous resolve to translate the server and service names
-      // into a list of endpoints.
-      /*resolver_.async_resolve(query,
-          boost::bind(&client::handle_resolve, this,
-            boost::asio::placeholders::error,
-            boost::asio::placeholders::iterator));*/
-    } else {
-      std::cerr << "already connected!\n";
-    }
-  }
-
-  void client::send_req() {
+/*  void client::send_req() {
     if (!connected_)
       return;
 
@@ -83,73 +55,23 @@ using boost::asio::ip::tcp;
     for (int i=0; i < 10; ++i)
       body += "Foobar";
 
-    message msg;
-    msg.id = message_id::foo;
+    message msg(message_id::foo);
     msg.body = "Foobar";
     msg.length = msg.body.size();
 
     std::ostream stream(&request_);
-    stream << (unsigned char) msg.id << " " << msg.length;
-    socket_.send(request_.data());
+    stream << (unsigned char) msg.id << " " << (uint16_t)msg.length << " " << msg.body;
+    size_t n = socket_.send(request_.data());
+    std::cout << " sent " << n << "bytes of data\n";
 
     //message_handler_.send(msg, request_);
-  }
-
-  void client::handle_resolve(const boost::system::error_code& err,
-      tcp::resolver::iterator endpoint_iterator)
-  {
-    if (!err)
-    {
-      // Attempt a connection to the first endpoint in the list. Each endpoint
-      // will be tried until we successfully establish a connection.
-      tcp::endpoint endpoint = *endpoint_iterator;
-      socket_.async_connect(endpoint,
-          boost::bind(&client::handle_connect, this,
-            boost::asio::placeholders::error, ++endpoint_iterator));
-    }
-    else
-    {
-      std::cout << "Error (in handle_resolve): " << err.message() << "\n";
-    }
-  }
-
-  void client::handle_connect(const boost::system::error_code& err,
-      tcp::resolver::iterator endpoint_iterator)
-  {
-    if (!err)
-    {
-      connected_ = true;
-      std::cout << "connected to server\n";
-
-      // The connection was successful. Send the request.
-      /*boost::asio::async_write(socket_, request_,
-          boost::bind(&client::handle_write_request, this,
-            boost::asio::placeholders::error));*/
-    }
-    else if (endpoint_iterator != tcp::resolver::iterator())
-    {
-      std::cout << "connection to that host failed, trying a different endpoint\n";
-      // The connection failed. Try the next endpoint in the list.
-      socket_.close();
-      tcp::endpoint endpoint = *endpoint_iterator;
-      socket_.async_connect(endpoint,
-          boost::bind(&client::handle_connect, this,
-            boost::asio::placeholders::error, ++endpoint_iterator));
-    }
-    else
-    {
-      std::cout << "Error (in handle_connect): " << err.message() << "\n";
-    }
-  }
+  }*/
 
 
+/*
 void client::do_read() {
   std::cout << "reading...\n";
-  /*async_read_until( socket_, response_, message::footer,
-    strand_.wrap(
-      boost::bind(&client::handle_read, this,
-        boost::asio::placeholders::error,
-        boost::asio::placeholders::bytes_transferred)));*/
+
 }
 
 void client::handle_read(const boost::system::error_code& e,
@@ -168,13 +90,11 @@ void client::handle_read(const boost::system::error_code& e,
   // disappear and the object will be destroyed automatically after this
   // handler returns. The connection class's destructor closes the socket.
 }
-
+*/
 void client::on_ping(const message &msg) {
   std::cout<<"got PINGED!\n";
-  message pong(message_id::pong);
-  message_handler_.send(pong, request_);
+  conn_->send(message(message_id::pong));
 }
 
-void client::disconnect(const boost::system::error_code& error) {
-  message_handler_.send(message(message_id::disconnect), request_);
+}
 }

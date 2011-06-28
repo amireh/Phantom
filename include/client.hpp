@@ -15,58 +15,45 @@
 #include <istream>
 #include <ostream>
 #include <string>
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include "message.hpp"
-#include "message_parser.hpp"
-#include "message_handler.hpp"
+#include "client_connection.hpp"
 
 using boost::asio::ip::tcp;
-class client
-{
-  public:
-    client(boost::asio::io_service& io_service);
-    virtual ~client();
+namespace Pixy {
+namespace Net {
 
-    void send_req();
-    void run();
+  class client
+  {
+    public:
+      client(boost::asio::io_service& io_service);
+      virtual ~client();
+
+      void run();
+
+    private:
+      client_connection_ptr conn_;
+
+      void on_ping(const message &);
+      //void handle_write_request(const boost::system::error_code& err);
+      //void handle_read_status_line(const boost::system::error_code& err);
+      //void handle_read_headers(const boost::system::error_code& err);
+      //void handle_read_content(const boost::system::error_code& err);
+      //void do_read();
+      //void handle_read(const boost::system::error_code& e,
+      //    std::size_t bytes_transferred);
+      //
+      //tcp::resolver resolver_;
+      //tcp::socket socket_;
+      //boost::asio::streambuf request_;
+      //boost::asio::streambuf response_;
+      boost::asio::io_service &io_service_;
+      //boost::asio::strand strand_;
 
 
+      boost::asio::deadline_timer timer_;
 
-  private:
-    message_parser message_parser_;
-    message_handler message_handler_;
+      bool connected_;
+  };
 
-    void disconnect(const boost::system::error_code& error);
-
-    void connect();
-
-    void on_ping(const message &);
-
-    void handle_resolve(const boost::system::error_code& err,
-        tcp::resolver::iterator endpoint_iterator);
-    void handle_connect(const boost::system::error_code& err,
-        tcp::resolver::iterator endpoint_iterator);
-    void handle_write_request(const boost::system::error_code& err);
-    void handle_read_status_line(const boost::system::error_code& err);
-    void handle_read_headers(const boost::system::error_code& err);
-    void handle_read_content(const boost::system::error_code& err);
-    void do_read();
-    void handle_read(const boost::system::error_code& e,
-        std::size_t bytes_transferred);
-
-    tcp::resolver resolver_;
-    tcp::socket socket_;
-    boost::asio::streambuf request_;
-    boost::asio::streambuf response_;
-    boost::asio::io_service &io_service_;
-    boost::asio::strand strand_;
-    std::string server_, port_;
-
-    boost::asio::deadline_timer timer_;
-
-    bool connected_;
-};
-
+}
+}
 #endif

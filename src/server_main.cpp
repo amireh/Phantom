@@ -44,8 +44,8 @@ int main(int argc, char* argv[])
 
     // Run server in background thread.
     //std::size_t num_threads = boost::lexical_cast<std::size_t>(argv[3]);
-    http::server3::server* s = &http::server3::server::singleton();
-    boost::thread t(boost::bind(&http::server3::server::run, s));
+    Pixy::Net::server* s = &Pixy::Net::server::singleton();
+    boost::thread t(boost::bind(&Pixy::Net::server::run, s));
 
     // Restore previous signals.
     pthread_sigmask(SIG_SETMASK, &old_mask, 0);

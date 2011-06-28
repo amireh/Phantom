@@ -22,84 +22,80 @@
 #include "connection.hpp"
 //#include "guest_connection.hpp"
 
+namespace Pixy {
+namespace Net {
 
-namespace http {
-namespace server3 {
+  /// The top-level class of the HTTP server.
+  class server : private boost::noncopyable
+  {
+  public:
+    /// Construct the server to listen on the specified TCP address and port, and
+    /// serve up files from the given directory.
+    explicit server();
 
-/// The top-level class of the HTTP server.
-class server
-  : private boost::noncopyable
-{
-public:
-  /// Construct the server to listen on the specified TCP address and port, and
-  /// serve up files from the given directory.
-  explicit server();
+    static server& singleton();
 
-  static server& singleton();
+    /// Run the server's io_service loop.
+    void run();
 
-  /// Run the server's io_service loop.
-  void run();
+    /// Stop the server.
+    void stop();
 
-  /// Stop the server.
-  void stop();
+  private:
+    // connection can mark itself as dead by calling close()
+    friend class connection;
 
+    void do_stop();
 
+    // a thread handling io_service::run()
+    void work();
 
-private:
-  // connection can mark itself as dead by calling close()
-  friend class connection;
+    // marks the connection as dead
+    // @note: called by the connection itself when it needs to shutdown
+    void close(connection_ptr);
+    void _mark_dead(connection_ptr);
 
-  void do_stop();
+    // actually removes the connection from its respective container
+    void do_close(connection_ptr);
+    // cleans up all dead connections awaiting removal
+    void cleanup();
 
-  // a thread handling io_service::run()
-  void work();
+    // orders every connection to send a PING msg to track dead connections
+    // @note: after all connections are pinged, server::cleanup() is called
+    // right before the ping timer is refreshed, this is done by the use of
+    // the server strand object
+    void ping_clients(const boost::system::error_code& error);
+    // resets the ping timer to reactivate in another ping_interval seconds
+    void refresh_timer();
 
-  // marks the connection as dead
-  // @note: called by the connection itself when it needs to shutdown
-  void close(connection_ptr);
-  void _mark_dead(connection_ptr);
+    /// Handle completion of an asynchronous accept operation.
+    void handle_accept(const boost::system::error_code& e);
 
-  // actually removes the connection from its respective container
-  void do_close(connection_ptr);
-  // cleans up all dead connections awaiting removal
-  void cleanup();
+    /// The number of threads that will call io_service::run().
+    const std::size_t thread_pool_size_;
 
-  // orders every connection to send a PING msg to track dead connections
-  // @note: after all connections are pinged, server::cleanup() is called
-  // right before the ping timer is refreshed, this is done by the use of
-  // the server strand object
-  void ping_clients(const boost::system::error_code& error);
-  // resets the ping timer to reactivate in another ping_interval seconds
-  void refresh_timer();
+    /// The io_service used to perform asynchronous operations.
+    boost::asio::io_service io_service_;
 
-  /// Handle completion of an asynchronous accept operation.
-  void handle_accept(const boost::system::error_code& e);
+    /// Acceptor used to listen for incoming connections.
+    boost::asio::ip::tcp::acceptor acceptor_;
 
-  /// The number of threads that will call io_service::run().
-  const std::size_t thread_pool_size_;
+    boost::asio::strand strand_;
 
-  /// The io_service used to perform asynchronous operations.
-  boost::asio::io_service io_service_;
+    /// The next connection to be accepted.
+    connection_ptr new_connection_;
 
-  /// Acceptor used to listen for incoming connections.
-  boost::asio::ip::tcp::acceptor acceptor_;
+    //std::list<connection_ptr> connections;
+    //std::vector<connection_ptr> dead_connections;
+    //std::list<gconnection_ptr> guests;
 
-  boost::asio::strand strand_;
+    //boost::asio::deadline_timer ping_timer_;
+    const int ping_interval;
 
-  /// The next connection to be accepted.
-  connection_ptr new_connection_;
+    static server* __instance;
 
-  //std::list<connection_ptr> connections;
-  //std::vector<connection_ptr> dead_connections;
-  //std::list<gconnection_ptr> guests;
-
-  //boost::asio::deadline_timer ping_timer_;
-  const int ping_interval;
-
-  static server* __instance;
-
-  boost::thread_group workers;
-};
+    boost::thread_group workers;
+  };
 
 
 } // namespace server3

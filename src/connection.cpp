@@ -15,39 +15,37 @@
 #include <fstream>
 #include "server.hpp"
 
-namespace http {
-namespace server3 {
+namespace Pixy {
+namespace Net {
 
 connection::connection(boost::asio::io_service& io_service)
   : strand_(io_service),
     socket_(io_service),
     message_parser_(),
-    message_handler_(io_service, socket_),
+    message_handler_(io_service),
     request_(message::max_length),
     response_(message::max_length)
 {
-  message_handler_.bind(message_id::pong, this, &connection::on_pong);
+  /*message_handler_.bind(message_id::pong, this, &connection::on_pong);
   message_handler_.bind(message_id::foo, this, &connection::on_foo);
-  message_handler_.bind(message_id::disconnect, this, &connection::on_disconnect);
+  message_handler_.bind(message_id::disconnect, this, &connection::on_disconnect);*/
 }
 
 connection::~connection() {
   std::cout << "A connection has been destroyed\n";
 }
 
-boost::asio::ip::tcp::socket& connection::socket()
-{
+boost::asio::ip::tcp::socket& connection::socket() {
   return socket_;
 }
-
-void connection::start()
-{
-  //std::cout << "A connection has been accepted\n";
-  read();
-  message foo(message_id::foo);
-  foo.body = "HAI";
-  send(foo);
+message_handler& connection::get_message_handler() {
+  return message_handler_;
 }
+
+void connection::start() {
+  read();
+}
+
 void connection::stop() {
 
   boost::system::error_code ignored_ec;
@@ -99,11 +97,12 @@ void connection::handle_read_header(const boost::system::error_code& e,
       if (msg_.length != 0)
         // let's read the body
         read_body();
-
-      // it's a content-less msg, dispatch and read the next
-      // ...
-      message_handler_.notify(msg_);
-      read();
+      else {
+        // it's a content-less msg, dispatch and read the next
+        // ...
+        message_handler_.deliver(msg_);
+        read();
+      }
     }
     else
     {
@@ -130,7 +129,7 @@ void connection::handle_read_body(const boost::system::error_code& e,
     bool result = message_parser_.parse_body(msg_, request_);
     if (result) {
       // message is ready for dispatching
-      message_handler_.notify(msg_);
+      message_handler_.deliver(msg_);
 
       // read next message
       read();
@@ -168,7 +167,7 @@ void connection::on_pong(const message &msg) {
 }
 
 void connection::on_foo(const message &msg) {
-  std::cout << "got FOO\n";
+  std::cout << "got FOO: " << msg.body << "\n";
 }
 
 void connection::on_disconnect(const message &msg) {

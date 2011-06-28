@@ -15,6 +15,8 @@ ADD_EXECUTABLE(Server ${Project_SRCS})
 # add sources
 SET(Project_SRCS
   client.cpp
+  connection.cpp
+  client_connection.cpp
   message.cpp
   message_parser.cpp
   message_handler.cpp

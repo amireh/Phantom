@@ -16,8 +16,8 @@
 #include <boost/lexical_cast.hpp>
 #include <vector>
 
-namespace http {
-namespace server3 {
+namespace Pixy {
+namespace Net {
 
 server* server::__instance = 0;
 
@@ -59,8 +59,7 @@ void server::run()
 
   std::cout << "Server up, accepting connections on " << thread_pool_size_ << " threads\n";
   std::cout
-    << "Messages header length: " << message::header_length
-    << ", footer length: " << message::footer_length << "\n";
+    << "Messages header length: " << message::header_length << "\n";
 
   // start our player ping timer
   //refresh_timer();

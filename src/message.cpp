@@ -3,6 +3,9 @@
 
 //const char* message::footer = "\r\n\r\n";
 
+namespace Pixy {
+namespace Net {
+
 std::vector<boost::asio::const_buffer> message::to_buffers() {
   std::string me;
   me.push_back((unsigned char)id);
@@ -18,4 +21,7 @@ std::vector<boost::asio::const_buffer> message::to_buffers() {
   buffers.push_back(boost::asio::buffer(me));
 
   return buffers;
+}
+
+}
 }

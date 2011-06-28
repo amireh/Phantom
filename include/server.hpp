@@ -89,11 +89,11 @@ private:
   /// The next connection to be accepted.
   connection_ptr new_connection_;
 
-  std::list<connection_ptr> connections;
-  std::vector<connection_ptr> dead_connections;
+  //std::list<connection_ptr> connections;
+  //std::vector<connection_ptr> dead_connections;
   //std::list<gconnection_ptr> guests;
 
-  boost::asio::deadline_timer ping_timer_;
+  //boost::asio::deadline_timer ping_timer_;
   const int ping_interval;
 
   static server* __instance;

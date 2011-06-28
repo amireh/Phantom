@@ -23,9 +23,8 @@ connection::connection(boost::asio::io_service& io_service)
     socket_(io_service),
     message_parser_(),
     message_handler_(socket_, strand_, message_parser_),
-    request_(512),
-    response_(512),
-    ping_timeouts(0)
+    request_(message::max_length),
+    response_(message::max_length)
 {
   message_handler_.bind(message_id::pong, this, &connection::on_pong);
   message_handler_.bind(message_id::foo, this, &connection::on_foo);
@@ -33,7 +32,7 @@ connection::connection(boost::asio::io_service& io_service)
 }
 
 connection::~connection() {
-  //std::cout << "A connection has been destroyed\n";
+  std::cout << "A connection has been destroyed\n";
 }
 
 boost::asio::ip::tcp::socket& connection::socket()
@@ -44,7 +43,6 @@ boost::asio::ip::tcp::socket& connection::socket()
 void connection::start()
 {
   //std::cout << "A connection has been accepted\n";
-  connected = true;
   read();
 }
 void connection::stop() {
@@ -52,43 +50,20 @@ void connection::stop() {
   boost::system::error_code ignored_ec;
 
   // initiate graceful connection closure & stop all asynchronous ops
-  //socket_.cancel(ignored_ec);
-  //socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+  socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
   socket_.close(ignored_ec);
 
-  //std::cout << "A connection has been closed\n";
+  std::cout << "A connection has been closed\n";
 }
 
 void connection::read() {
-  if (!connected)
-    return;
-  strand_.post( boost::bind(&connection::do_read, shared_from_this()) );
-}
-
-void connection::do_read() {
-  if (!connected)
-    return;
-
-  /*async_read_until(
-    socket_,
-    request_,
-    message::footer,
-    //strand_.wrap(
-      boost::bind(
-        &connection::handle_read,
-        shared_from_this(),
-        boost::asio::placeholders::error,
-        boost::asio::placeholders::bytes_transferred
-      )
-    //)
-  );*/
-
+  std::cout << "reading a message\n";
   async_read(
     socket_,
     request_,
     boost::asio::transfer_at_least(message::header_length),
     boost::bind(
-      &connection::handle_read2,
+      &connection::handle_read_header,
       shared_from_this(),
       boost::asio::placeholders::error,
       boost::asio::placeholders::bytes_transferred
@@ -96,62 +71,46 @@ void connection::do_read() {
   );
 }
 
-void connection::handle_read(const boost::system::error_code& e,
+
+void connection::read_body() {
+  std::cout << "reading a message's body\n";
+  socket_.async_read_some(boost::asio::buffer(body_, msg_.length - msg_.body.size()),
+    strand_.wrap(
+      boost::bind(&connection::handle_read_body, shared_from_this(),
+        boost::asio::placeholders::error,
+        boost::asio::placeholders::bytes_transferred)));
+}
+
+
+void connection::handle_read_header(const boost::system::error_code& e,
     std::size_t bytes_transferred)
 {
-  if (!connected)
-    return;
-
-  if (!e && bytes_transferred != 0) {
-    // no errors, handle request
-    message_handler_.recv(request_);
-  } else if (e == boost::asio::error::no_memory || e == boost::asio::error::not_found) {
-    // bad request: discard the current request and free up the stream
-    //std::cout << "request stream has " << request_.size() << "bytes\n";
-    request_.consume(request_.size());
-    //std::cout << "request stream now has " << request_.size() << "bytes\n";
-
-  } else if (e != boost::asio::error::eof) {
-    // we cannot recover from this, tear down the connection
-    std::cerr << "an error occured: " << e.message() << "\n";
-    //if (connected)
-    return strand_.post( boost::bind(&connection::shutdown, shared_from_this()));
-  }
-
-  // wait for the next request
-  do_read();
-  /*
   if (!e)
   {
-    boost::tribool result;
-    boost::tie(result, boost::tuples::ignore) = request_parser_.parse(
-        request_, buffer_.data(), buffer_.data() + bytes_transferred);
+    bool result = message_parser_.parse_header(msg_, request_);
 
     if (result)
     {
-      request_handler_.handle_request(request_, reply_);
-      boost::asio::async_write(socket_, reply_.to_buffers(),
-          strand_.wrap(
-            boost::bind(&connection::handle_write, shared_from_this(),
-              boost::asio::placeholders::error)));
-    }
-    else if (!result)
-    {
-      reply_ = reply::stock_reply(reply::bad_request);
-      boost::asio::async_write(socket_, reply_.to_buffers(),
-          strand_.wrap(
-            boost::bind(&connection::handle_write, shared_from_this(),
-              boost::asio::placeholders::error)));
+      // message has a valid header
+      if (msg_.length != 0)
+        // let's read the body
+        read_body();
+
+      // it's a content-less msg, dispatch and read the next
+      // ...
+      read();
     }
     else
     {
-      socket_.async_read_some(boost::asio::buffer(buffer_),
+      // invalid request
+      /*reply_ = reply::stock_reply(reply::bad_request);
+      boost::asio::async_write(socket_, reply_.to_buffers(),
           strand_.wrap(
-            boost::bind(&connection::handle_read, shared_from_this(),
-              boost::asio::placeholders::error,
-              boost::asio::placeholders::bytes_transferred)));
+            boost::bind(&connection::handle_write, shared_from_this(),
+              boost::asio::placeholders::error)));*/
     }
-  }*/
+
+  }
 
   // If an error occurs then no new asynchronous operations are started. This
   // means that all shared_ptr references to the connection object will
@@ -159,121 +118,28 @@ void connection::handle_read(const boost::system::error_code& e,
   // handler returns. The connection class's destructor closes the socket.
 }
 
-
-void connection::handle_read2(const boost::system::error_code& e,
+void connection::handle_read_body(const boost::system::error_code& e,
     std::size_t bytes_transferred)
 {
-  if (!connected)
-    return;
+  if (!e) {
+    bool result = message_parser_.parse_body(msg_, request_);
+    if (result) {
+      // message is ready for dispatching
 
-  if (!e && bytes_transferred != 0) {
-    // no errors, handle request
-    try {
-      message_handler_.recv(request_);
-    } catch (bad_request& e) {
-      message_handler_.send(message(message_id::bad_request), response_);
-      return strand_.post( boost::bind(&connection::shutdown, shared_from_this()));
+      // read next message
+      read();
+    } else {
+      // need more data
+      read_body();
     }
-  } else if (e == boost::asio::error::no_memory || e == boost::asio::error::not_found) {
-    // bad request: discard the current request and free up the stream
-    //std::cout << "request stream has " << request_.size() << "bytes\n";
-    request_.consume(request_.size());
-    //std::cout << "request stream now has " << request_.size() << "bytes\n";
 
-  } else if (e != boost::asio::error::eof) {
-    // we cannot recover from this, tear down the connection
-    std::cerr << "an error occured: " << e.message() << "\n";
-    //if (connected)
-    return strand_.post( boost::bind(&connection::shutdown, shared_from_this()));
   }
 
-  // wait for the next request
-  read();
-  /*
-  if (!e)
-  {
-    boost::tribool result;
-    boost::tie(result, boost::tuples::ignore) = request_parser_.parse(
-        request_, buffer_.data(), buffer_.data() + bytes_transferred);
-
-    if (result)
-    {
-      request_handler_.handle_request(request_, reply_);
-      boost::asio::async_write(socket_, reply_.to_buffers(),
-          strand_.wrap(
-            boost::bind(&connection::handle_write, shared_from_this(),
-              boost::asio::placeholders::error)));
-    }
-    else if (!result)
-    {
-      reply_ = reply::stock_reply(reply::bad_request);
-      boost::asio::async_write(socket_, reply_.to_buffers(),
-          strand_.wrap(
-            boost::bind(&connection::handle_write, shared_from_this(),
-              boost::asio::placeholders::error)));
-    }
-    else
-    {
-      socket_.async_read_some(boost::asio::buffer(buffer_),
-          strand_.wrap(
-            boost::bind(&connection::handle_read, shared_from_this(),
-              boost::asio::placeholders::error,
-              boost::asio::placeholders::bytes_transferred)));
-    }
-  }*/
-
-  // If an error occurs then no new asynchronous operations are started. This
-  // means that all shared_ptr references to the connection object will
-  // disappear and the object will be destroyed automatically after this
-  // handler returns. The connection class's destructor closes the socket.
 }
 
-/*void connection::handle_write(const boost::system::error_code& e)
-{
-  if (!e)
-  {
-    // Initiate graceful connection closure.
-    boost::system::error_code ignored_ec;
-    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-  }
-  if (e) {
-    std::cerr << "an error occured while writing: " << e.message() << "\n";
-  }
-
-  // No new asynchronous operations are started. This means that all shared_ptr
-  // references to the connection object will disappear and the object will be
-  // destroyed automatically after this handler returns. The connection class's
-  // destructor closes the socket.
-}*/
-
-void connection::shutdown() {
-  if (!connected)
-    return;
-
-  connected = false;
-  // stop all current asynchronous ops and block the socket
-  stop();
-  // tell the server to remove us to tear this object down
-  strand_.post( boost::bind(&server::close, &server::singleton(), shared_from_this()));
-}
-
-void connection::ping() {
-  try {
-    //std::cout << "pinging client...\n";
-    message ping(message_id::ping);
-    message_handler_.send(ping, response_);
-
-  } catch (std::exception& e) {
-    std::cerr << "ping timeout, client possibly disconnected\n";
-    if (++ping_timeouts == 3) {
-      strand_.post( boost::bind(&connection::shutdown, shared_from_this()));
-    }
-  }
-}
 
 void connection::on_pong(boost::shared_ptr<message> msg) {
   //std::cout<<"got PONGED!\n";
-  ping_timeouts = 0;
 }
 
 void connection::on_foo(boost::shared_ptr<message> msg) {
@@ -282,7 +148,7 @@ void connection::on_foo(boost::shared_ptr<message> msg) {
 
 void connection::on_disconnect(boost::shared_ptr<message> msg) {
   //std::cout << "client disconnecting\n";
-  strand_.post( boost::bind(&connection::shutdown, shared_from_this()));
+  strand_.post( boost::bind(&connection::stop, shared_from_this()));
 }
 } // namespace server3
 } // namespace http

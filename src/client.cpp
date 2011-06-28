@@ -21,10 +21,8 @@ using boost::asio::ip::tcp;
     send_req();
     do_read();
 
-    timer_.expires_from_now(boost::posix_time::seconds(5));
-    timer_.async_wait(boost::bind(&client::disconnect, this, boost::asio::placeholders::error));
-
-
+    //timer_.expires_from_now(boost::posix_time::seconds(5));
+    //timer_.async_wait(boost::bind(&client::disconnect, this, boost::asio::placeholders::error));
     //send_req();
   }
 
@@ -87,11 +85,14 @@ using boost::asio::ip::tcp;
 
     message msg;
     msg.id = message_id::foo;
-    msg.body = (char*)body.c_str();
-    msg.length = strlen(msg.body) * sizeof(char);
+    msg.body = "Foobar";
+    msg.length = msg.body.size();
 
-    message_handler_.send(msg, request_);
-    msg.body = 0;
+    std::ostream stream(&request_);
+    stream << (unsigned char) msg.id << " " << msg.length;
+    socket_.send(request_.data());
+
+    //message_handler_.send(msg, request_);
   }
 
   void client::handle_resolve(const boost::system::error_code& err,

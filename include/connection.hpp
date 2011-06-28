@@ -39,11 +39,7 @@ public:
   /// Start the first asynchronous operation for the connection.
   void start();
 
-  void ping();
-
 private:
-  friend class server;
-
   // calls stop() and server::close(connection*) to remove us from tracker
   void shutdown();
 
@@ -55,25 +51,28 @@ private:
   void on_disconnect(boost::shared_ptr<message> msg);
 
   void read();
+  void read_body();
   void do_read();
-  void handle_read(
-    const boost::system::error_code& e,
+
+  void
+  handle_read_header(
+    const boost::system::error_code& error,
     std::size_t bytes_transferred);
-  void handle_read2(
-    const boost::system::error_code& e,
+  void
+  handle_read_body(
+    const boost::system::error_code& error,
     std::size_t bytes_transferred);
 
-  //void handle_write(const boost::system::error_code& e);
   boost::asio::ip::tcp::socket socket_;
   boost::asio::streambuf request_;
+  boost::asio::mutable_buffer body_;
   boost::asio::streambuf response_;
   boost::asio::strand strand_;
 
   message_parser message_parser_;
   message_handler message_handler_;
+  message msg_;
 
-  int ping_timeouts; // if client doesnt respond to 3 ping requests, the connection is closed
-  bool connected;
 };
 
 typedef boost::shared_ptr<connection> connection_ptr;

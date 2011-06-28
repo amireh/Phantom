@@ -26,7 +26,7 @@ server::server()
     thread_pool_size_(4),
     acceptor_(io_service_),
     new_connection_(new connection(io_service_)),
-    ping_timer_(io_service_),
+    //ping_timer_(io_service_),
     strand_(io_service_),
     ping_interval(5)
 {
@@ -63,7 +63,7 @@ void server::run()
     << ", footer length: " << message::footer_length << "\n";
 
   // start our player ping timer
-  refresh_timer();
+  //refresh_timer();
 
   // Wait for all threads in the pool to exit.
   workers.join_all();
@@ -87,8 +87,8 @@ void server::do_stop()
   /*for (connection_ptr conn : connections)
     conn->stop();*/
   std::cout << "Server: Going down.\n";
-  dead_connections.clear();
-  connections.clear();
+  //dead_connections.clear();
+  //connections.clear();
 
   new_connection_.reset();
 
@@ -100,7 +100,7 @@ void server::handle_accept(const boost::system::error_code& e)
 {
   if (!e)
   {
-    connections.push_back(new_connection_);
+    //connections.push_back(new_connection_);
 
     new_connection_->start();
     new_connection_.reset(new connection(io_service_));
@@ -111,12 +111,13 @@ void server::handle_accept(const boost::system::error_code& e)
 }
 
 void server::cleanup() {
-  std::cout << "Server: cleaning up " << dead_connections.size() << " dead connections\n";
+  /*std::cout << "Server: cleaning up " << dead_connections.size() << " dead connections\n";
   for (connection_ptr conn : dead_connections) {
     connections.remove(conn);
   }
-  dead_connections.clear();
+  dead_connections.clear();*/
 }
+/*
 void server::close(connection_ptr conn) {
   strand_.post( boost::bind(&server::_mark_dead, this, conn) );
 }
@@ -130,10 +131,6 @@ void server::do_close(connection_ptr conn) {
   conn.reset();
   //std::cout << "there r " << connections.size() << " conns open\n";
 }
-/*void server::close(gconnection_ptr conn) {
-  guests.remove(conn);
-  conn.reset();
-}*/
 
 void server::ping_clients(const boost::system::error_code& error) {
   if (!connections.empty()) {
@@ -149,6 +146,6 @@ void server::ping_clients(const boost::system::error_code& error) {
 void server::refresh_timer() {
   ping_timer_.expires_from_now(boost::posix_time::seconds(ping_interval));
   ping_timer_.async_wait(boost::bind(&server::ping_clients, this, boost::asio::placeholders::error));
-}
+}*/
 } // namespace server3
 } // namespace http

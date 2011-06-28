@@ -3,6 +3,8 @@
 
 #include <boost/asio.hpp>
 #include <boost/array.hpp>
+#include <boost/logic/tribool.hpp>
+#include <boost/tuple/tuple.hpp>
 #include <exception>
 #include <stdexcept>
 #include "message.hpp"
@@ -33,12 +35,20 @@ class bad_request : public std::runtime_error {
 
 class message_parser {
   public:
+  typedef boost::asio::buffers_iterator<
+    boost::asio::streambuf::const_buffers_type> iterator;
+
     message_parser();
 
-    void parse(message &msg, boost::asio::streambuf& in);
-    void parse(message &msg, boost::asio::mutable_buffer& in);
+    bool parse_header(message &msg, boost::asio::streambuf& in);
+    bool parse_body(message& msg, boost::asio::streambuf& in);
+    //void parse(message &msg, boost::asio::mutable_buffer& in);
     void dump(const message &msg, boost::asio::streambuf& out);
     void dump(const message &msg, boost::asio::mutable_buffer& out);
+
+  private:
+    /// Handle the next character of input.
+    boost::tribool consume(message& msg, char input);
 };
 
 #endif

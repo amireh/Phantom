@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
+#include <string>
 
 enum class message_id : unsigned char {
   unassigned,
@@ -11,14 +12,16 @@ enum class message_id : unsigned char {
   bad_request,
   ping,
   pong,
-  foo
+  foo,
+
+  placeholder
 };
 
 struct message
 {
   message_id id;
   uint16_t length;
-  char *body;
+  std::string body;
   static const char* footer;
 
   message(message_id in_id)
@@ -27,7 +30,7 @@ struct message
     length(0)
   {
   }
-  message() : body(0) {
+  message() {
     reset();
   }
   ~message() {
@@ -36,10 +39,8 @@ struct message
 
   void reset() {
     id = message_id::unassigned;
-    if (body)
-      delete body;
+    body.clear();
     length = 0;
-    body = 0;
   }
 
   enum {

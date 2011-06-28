@@ -27,7 +27,8 @@ server::server()
     acceptor_(io_service_),
     new_connection_(new connection(io_service_)),
     ping_timer_(io_service_),
-    strand_(io_service_)
+    strand_(io_service_),
+    ping_interval(5)
 {
   // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
   boost::asio::ip::tcp::resolver resolver(io_service_);
@@ -62,7 +63,7 @@ void server::run()
     << ", footer length: " << message::footer_length << "\n";
 
   // start our player ping timer
-  //refresh_timer();
+  refresh_timer();
 
   // Wait for all threads in the pool to exit.
   workers.join_all();
@@ -76,17 +77,23 @@ void server::work() {
   }
 }
 
-void server::stop()
-{
-  for (connection_ptr conn : connections)
-    conn->stop();
+void server::stop() {
+  std::cout << "Server: Shutting down gracefully, waiting for current jobs to finish. Please wait.\n";
+  strand_.post( boost::bind(&server::do_stop, this) );
+}
 
+void server::do_stop()
+{
+  /*for (connection_ptr conn : connections)
+    conn->stop();*/
+  std::cout << "Server: Going down.\n";
+  dead_connections.clear();
   connections.clear();
 
   new_connection_.reset();
 
   io_service_.stop();
-  std::cout << "Server down\n";
+  std::cout << "Server: Down cleanly.\n";
 }
 
 void server::handle_accept(const boost::system::error_code& e)
@@ -103,20 +110,23 @@ void server::handle_accept(const boost::system::error_code& e)
   }
 }
 
+void server::cleanup() {
+  std::cout << "Server: cleaning up " << dead_connections.size() << " dead connections\n";
+  for (connection_ptr conn : dead_connections) {
+    connections.remove(conn);
+  }
+  dead_connections.clear();
+}
 void server::close(connection_ptr conn) {
-  strand_.post( boost::bind(&server::do_close, this, conn) );
+  strand_.post( boost::bind(&server::_mark_dead, this, conn) );
+}
+
+void server::_mark_dead(connection_ptr conn) {
+  dead_connections.push_back(conn);
 }
 void server::do_close(connection_ptr conn) {
-  /*std::cout << "there r " << connections.size() << " conns open\n";
-  for (connection_ptr local : connections)
-    if (local == conn) {
-      local.reset();
-      break;
-    }*/
-
   connections.remove(conn);
   //std::cout << "the conn has " << conn.use_count() << " referencers\n";
-  //delete conn.get();
   conn.reset();
   //std::cout << "there r " << connections.size() << " conns open\n";
 }
@@ -126,14 +136,18 @@ void server::do_close(connection_ptr conn) {
 }*/
 
 void server::ping_clients(const boost::system::error_code& error) {
-  if (!connections.empty())
+  if (!connections.empty()) {
+    std::cout << "Server: pinging clients\n";
     for (connection_ptr conn : connections) { conn->ping(); }
+  }
 
-  refresh_timer();
+  strand_.post( boost::bind(&server::cleanup, this) );
+  strand_.post( boost::bind(&server::refresh_timer, this) );
+  //refresh_timer();
 }
 
 void server::refresh_timer() {
-  ping_timer_.expires_from_now(boost::posix_time::seconds(5));
+  ping_timer_.expires_from_now(boost::posix_time::seconds(ping_interval));
   ping_timer_.async_wait(boost::bind(&server::ping_clients, this, boost::asio::placeholders::error));
 }
 } // namespace server3

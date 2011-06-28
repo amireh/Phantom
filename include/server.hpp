@@ -46,15 +46,30 @@ public:
 
 
 private:
+  // connection can mark itself as dead by calling close()
   friend class connection;
 
+  void do_stop();
+
+  // a thread handling io_service::run()
   void work();
+
+  // marks the connection as dead
+  // @note: called by the connection itself when it needs to shutdown
   void close(connection_ptr);
+  void _mark_dead(connection_ptr);
 
+  // actually removes the connection from its respective container
   void do_close(connection_ptr);
+  // cleans up all dead connections awaiting removal
+  void cleanup();
 
-
+  // orders every connection to send a PING msg to track dead connections
+  // @note: after all connections are pinged, server::cleanup() is called
+  // right before the ping timer is refreshed, this is done by the use of
+  // the server strand object
   void ping_clients(const boost::system::error_code& error);
+  // resets the ping timer to reactivate in another ping_interval seconds
   void refresh_timer();
 
   /// Handle completion of an asynchronous accept operation.
@@ -75,9 +90,11 @@ private:
   connection_ptr new_connection_;
 
   std::list<connection_ptr> connections;
+  std::vector<connection_ptr> dead_connections;
   //std::list<gconnection_ptr> guests;
 
   boost::asio::deadline_timer ping_timer_;
+  const int ping_interval;
 
   static server* __instance;
 

@@ -63,24 +63,33 @@ namespace Net {
 
   protected:
 
-    void on_pong(const message& msg);
-    void on_foo(const message& msg);
-    void on_disconnect(const message& msg);
-
     virtual void read();
-    virtual void read_body();
-    //void do_read();
+    virtual void do_read();
 
+
+    virtual void do_send(const message& msg);
+
+#if 0 // __DISABLED__
     virtual void
     handle_read_header(
       const boost::system::error_code& error,
       std::size_t bytes_transferred);
+
+    virtual void read_body();
     virtual void
     handle_read_body(
       const boost::system::error_code& error,
       std::size_t bytes_transferred);
 
-    virtual void handle_write(const boost::system::error_code& e);
+    virtual void
+    handle_write(
+      const boost::system::error_code& e,
+      std::size_t bytes_transferred);
+#endif // __DISABLED__
+    virtual void
+    handle_read_all(
+      const boost::system::error_code& error,
+      std::size_t bytes_transferred);
 
     boost::asio::ip::tcp::socket socket_;
     boost::asio::streambuf request_;

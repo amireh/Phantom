@@ -50,7 +50,7 @@ namespace Net {
     message_id id;
     uint16_t length;
     std::string body;
-    //static const char* footer;
+    static const char* footer;
 
     message(message_id in_id)
     : id(in_id),
@@ -81,7 +81,7 @@ namespace Net {
 
     enum {
       header_length = sizeof(message_id) + sizeof(uint16_t) + (sizeof(char)*2),
-      //footer_length = sizeof(char) * 4, // strlen("\r\n\r\n")
+      footer_length = sizeof(char) * 4, // strlen("\r\n\r\n")
       max_length = 65536, // no single message can be longer than this (stored in uint16_t)
       //gmax_length = 512
     };

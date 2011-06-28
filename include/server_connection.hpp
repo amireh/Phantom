@@ -28,22 +28,35 @@
 namespace Pixy {
 namespace Net {
 
-  /// Represents a single connection from a client.
-  class connection : public base_connection
-  {
-    public:
-      /// Construct a connection with the given io_service.
-      explicit connection(boost::asio::io_service&);
-      virtual ~connection();
+/// Represents a single connection from a client.
+class connection : public base_connection
+{
+  public:
 
-      virtual boost::shared_ptr<connection> shared_from_this() {
-        return boost::static_pointer_cast<connection>(base_connection::shared_from_this());
-      }
+  /// Construct a connection with the given io_service.
+  explicit connection(boost::asio::io_service&);
+  virtual ~connection();
 
-    protected:
-  };
+  virtual boost::shared_ptr<connection> shared_from_this() {
+    return boost::static_pointer_cast<connection>(base_connection::shared_from_this());
+  }
 
-  typedef boost::shared_ptr<connection> connection_ptr;
+  virtual void stop();
+
+  void ping();
+
+  protected:
+
+  void on_pong(const message& msg);
+  void on_foo(const message& msg);
+  void on_disconnect(const message& msg);
+
+  boost::asio::streambuf pinger_;
+  message pingmsg_;
+  int ping_timeouts_;
+};
+
+typedef boost::shared_ptr<connection> connection_ptr;
 
 } // namespace Net
 } // namespace Pixy

@@ -45,7 +45,6 @@ namespace Net {
     private:
       connection_ptr conn_;
 
-      void on_ping(const message &);
       boost::asio::io_service &io_service_;
       boost::asio::deadline_timer timer_;
   };

@@ -39,15 +39,16 @@ namespace Net {
       std::cerr << "couldnt start the conn .. " << e.what() << "\n";
       throw e;
     }
-    /*message_handler_.bind(message_id::ping, this, &client::on_ping);
-    connect();
-    send_req();
-    do_read();*/
 
-    conn_->get_message_handler().bind(message_id::ping, this, &client::on_ping);
+    message foo(message_id::foo);
+    foo.body = "HAI";
+    for (int i=0; i < 3; ++i) {
+      conn_->send(foo);
+      timer_.expires_from_now(boost::posix_time::seconds(2));
+      //timer_.wait();
+    }
 
-    timer_.expires_from_now(boost::posix_time::seconds(2));
-    timer_.wait();
+
     //timer_.async_wait(boost::bind(&client::disconnect, this, boost::asio::placeholders::error));
     //send_req();
   }
@@ -57,10 +58,7 @@ namespace Net {
     conn_.reset();
   }
 
-  void client::on_ping(const message &msg) {
-    std::cout<<"got PINGED!\n";
-    conn_->send(message(message_id::pong));
-  }
+
 
 }
 }

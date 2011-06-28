@@ -30,6 +30,7 @@
 #include <boost/tuple/tuple.hpp>
 #include <exception>
 #include <stdexcept>
+#include <iostream>
 #include "message.hpp"
 
 namespace Pixy {
@@ -68,7 +69,8 @@ namespace Net {
 
       bool parse_header(message &msg, boost::asio::streambuf& in);
       bool parse_body(message& msg, boost::asio::streambuf& in);
-      //void parse(message &msg, boost::asio::mutable_buffer& in);
+      bool parse_all(message &msg, boost::asio::streambuf& in);
+
       void dump(const message &msg, boost::asio::streambuf& out);
       void dump(const message &msg, boost::asio::mutable_buffer& out);
 

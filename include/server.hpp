@@ -56,9 +56,15 @@ namespace Net {
     /// Stop the server.
     void stop();
 
-  private:
+  protected:
     // connection can mark itself as dead by calling close()
     friend class connection;
+
+    // marks the connection as dead and will be removed sometime later
+    // @note: called by the connection itself when it needs to shutdown
+    void _close(connection_ptr);
+
+  private:
 
     void do_stop();
 
@@ -66,12 +72,8 @@ namespace Net {
     void work();
 
     // marks the connection as dead
-    // @note: called by the connection itself when it needs to shutdown
-    void close(connection_ptr);
-    void _mark_dead(connection_ptr);
+    void mark_dead(connection_ptr);
 
-    // actually removes the connection from its respective container
-    void do_close(connection_ptr);
     // cleans up all dead connections awaiting removal
     void cleanup();
 
@@ -100,11 +102,11 @@ namespace Net {
     /// The next connection to be accepted.
     connection_ptr new_connection_;
 
-    //std::list<connection_ptr> connections;
-    //std::vector<connection_ptr> dead_connections;
+    std::list<connection_ptr> connections;
+    std::vector<connection_ptr> dead_connections;
     //std::list<gconnection_ptr> guests;
 
-    //boost::asio::deadline_timer ping_timer_;
+    boost::asio::deadline_timer ping_timer_;
     const int ping_interval;
 
     static server* __instance;

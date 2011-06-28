@@ -33,7 +33,8 @@ message_parser::message_parser() {
 bool message_parser::parse_header(message& msg,  boost::asio::streambuf& in) {
 
   if (in.size() < message::header_length) {
-    in.consume(in.size());
+    std::cerr << "message size is smaller than header!!\n";
+    //in.consume(in.size());
     return false;
   }
 
@@ -41,7 +42,7 @@ bool message_parser::parse_header(message& msg,  boost::asio::streambuf& in) {
 
   char sp1;
   unsigned char msg_id;
-  char msg_length[4];
+  char msg_length[sizeof(uint16_t)];
   std::istream is(&in);
   is.unsetf(std::ios_base::skipws);
   is >> msg_id >> sp1 >> msg_length >> sp1;
@@ -50,6 +51,7 @@ bool message_parser::parse_header(message& msg,  boost::asio::streambuf& in) {
   msg.length = atoi(msg_length);
 
   std::cout<< "msg id=" << (unsigned char)msg.id << ", length=" << msg.length << "(" << msg_length << ")\n";
+
   //assert(msg.id > message_id::unassigned && msg.id < message_id::placeholder);
   //assert(atoi(msg_length) <= message::max_length);
 
@@ -59,27 +61,47 @@ bool message_parser::parse_header(message& msg,  boost::asio::streambuf& in) {
   return false;
 }
 
-bool message_parser::parse_body(message& msg,  boost::asio::streambuf& in) {
+bool message_parser::parse_body(message& msg, boost::asio::streambuf& in) {
   int bytes_received = in.size();
   int bytes_left = msg.length - msg.body.size() - bytes_received;
   int bytes_to_process = (bytes_received > msg.length) ? msg.length : bytes_received;
 
+  std::cout << "processing " << bytes_to_process <<"b from " << bytes_received << " and there is " << bytes_left << "missing\n";
   // read until either the message length is reached or the buffer is empty
   std::istream is(&in);
-  while (msg.body.size() != msg.length || in.size() != 0)
+  while (msg.body.size() != msg.length && in.size() > 0) {
     msg.body.push_back(is.get());
+  }
+
 
   //std::cout << "body now is " << msg.body.size() << "bytes long and has " << msg.body << "\n";
   return bytes_left <= 0;
 }
 
+
+bool message_parser::parse_all(message& msg, boost::asio::streambuf& in) {
+
+  bool success = false;
+  if (parse_header(msg, in)) {
+    success = parse_body(msg, in);
+  }
+
+  return success;
+}
+
 void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
+
+  std::cout << "pre-message dump: buffer has " << out.size() << "(expected 0), ";
   std::ostream stream(&out);
   stream << (unsigned char)msg.id << " ";
   stream << (uint16_t)msg.body.size() << " ";
   if (!msg.body.empty()) // a message might not have a body
     stream << msg.body;
 
+  stream << message::footer;
+  std::cout << "post-dump: " << out.size() << "\n";
+
+  //out.prepare(sizeof(unsigned char) + 2 + sizeof(uint16_t) + msg.body.size());
 }
 
 }

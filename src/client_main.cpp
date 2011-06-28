@@ -39,15 +39,13 @@ int main(int argc, char* argv[])
     //boost::asio::io_service::work work(io_service);
     int nr_clients = atoi(argv[1]);
 
-    boost::thread_group threads;
-    for (int i=0; i < 3; ++i)
-      threads.create_thread(boost::bind(&boost::asio::io_service::run, &io_service));
-
-
     std::vector<Pixy::Net::client*> clients;
     for (int i =0; i < nr_clients; ++i)
       clients.push_back(new Pixy::Net::client(io_service));
 
+    boost::thread_group threads;
+    for (int i=0; i < 3; ++i)
+      threads.create_thread(boost::bind(&boost::asio::io_service::run, &io_service));
 
     std::cout << "press [return] to quit\n";
     std::getchar();

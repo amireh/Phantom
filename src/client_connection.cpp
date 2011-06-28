@@ -33,6 +33,7 @@ namespace Net {
       port_(port),
       connected_(false)
   {
+    message_handler_.bind(message_id::ping, this, &connection::on_ping);
   }
 
   connection::~connection() {
@@ -75,9 +76,13 @@ namespace Net {
 
   void connection::start() {
     base_connection::start();
-    message foo(message_id::foo);
-    foo.body = "HAI";
-    send(foo);
+
   }
+
+  void connection::on_ping(const message &msg) {
+    std::cout<<"got PINGED!\n";
+    send(message(message_id::pong));
+  }
+
 } // namespace server3
 } // namespace http

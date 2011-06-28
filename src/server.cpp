@@ -70,11 +70,11 @@ void server::run()
 }
 
 void server::work() {
-  try {
+  //try {
     io_service_.run();
-  } catch (std::exception& e) {
-    std::cerr << "an exception caught in a worker, aborting: " << e.what() << "\n";
-  }
+  //} catch (std::exception& e) {
+  //  std::cerr << "an exception caught in a worker, aborting: " << e.what() << "\n";
+  //}
 }
 
 void server::stop() {

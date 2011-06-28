@@ -5,6 +5,8 @@
 #include <cstring>
 #include <cstdint>
 #include <string>
+#include <vector>
+#include <boost/asio.hpp>
 
 enum class message_id : unsigned char {
   unassigned,
@@ -22,11 +24,11 @@ struct message
   message_id id;
   uint16_t length;
   std::string body;
-  static const char* footer;
+  //static const char* footer;
 
   message(message_id in_id)
   : id(in_id),
-    body(0),
+    body(""),
     length(0)
   {
   }
@@ -37,11 +39,19 @@ struct message
     reset();
   }
 
+  message(const message& rhs) {
+    this->id = rhs.id;
+    this->length = rhs.length;
+    this->body = std::string(rhs.body);
+  }
+
   void reset() {
     id = message_id::unassigned;
     body.clear();
     length = 0;
   }
+
+  std::vector<boost::asio::const_buffer> to_buffers();
 
   enum {
     header_length = sizeof(message_id) + sizeof(uint16_t),

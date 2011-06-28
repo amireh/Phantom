@@ -42,7 +42,7 @@ class client
 
     void connect();
 
-    void on_ping(boost::shared_ptr<message>);
+    void on_ping(const message &);
 
     void handle_resolve(const boost::system::error_code& err,
         tcp::resolver::iterator endpoint_iterator);

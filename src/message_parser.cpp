@@ -11,12 +11,12 @@ bool message_parser::parse_header(message& msg,  boost::asio::streambuf& in) {
     return false;
   }
 
-  char sp1;
+  //char sp1;
   unsigned char msg_id;
   char msg_length[4];
   std::istream is(&in);
   is.unsetf(std::ios_base::skipws);
-  is >> msg_id >> sp1 >> msg_length;
+  is >> msg_id >> msg_length;
 
   msg.id = (message_id)msg_id;
   msg.length = atoi(msg_length);
@@ -49,10 +49,11 @@ void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
 
   std::ostream stream(&out);
   //boost::asio::mutable_buffer stream(&out);
-  stream << (unsigned char)msg.id << "\n";
-  stream << (uint16_t)msg.length;
+  stream << (unsigned char)msg.id << " ";
+  stream << (uint16_t)msg.body.size() << " ";
   if (!msg.body.empty()) // a message might not have a body
     stream << msg.body;
-  stream << message::footer;
+  //stream << message::footer;
 
+  std::cout << stream.rdbuf();
 }

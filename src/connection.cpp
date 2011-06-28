@@ -22,7 +22,7 @@ connection::connection(boost::asio::io_service& io_service)
   : strand_(io_service),
     socket_(io_service),
     message_parser_(),
-    message_handler_(socket_, strand_, message_parser_),
+    message_handler_(io_service, socket_),
     request_(message::max_length),
     response_(message::max_length)
 {
@@ -44,6 +44,9 @@ void connection::start()
 {
   //std::cout << "A connection has been accepted\n";
   read();
+  message foo(message_id::foo);
+  foo.body = "HAI";
+  send(foo);
 }
 void connection::stop() {
 
@@ -58,6 +61,7 @@ void connection::stop() {
 
 void connection::read() {
   std::cout << "reading a message\n";
+  msg_.reset();
   async_read(
     socket_,
     request_,
@@ -98,6 +102,7 @@ void connection::handle_read_header(const boost::system::error_code& e,
 
       // it's a content-less msg, dispatch and read the next
       // ...
+      message_handler_.notify(msg_);
       read();
     }
     else
@@ -125,6 +130,7 @@ void connection::handle_read_body(const boost::system::error_code& e,
     bool result = message_parser_.parse_body(msg_, request_);
     if (result) {
       // message is ready for dispatching
+      message_handler_.notify(msg_);
 
       // read next message
       read();
@@ -134,20 +140,39 @@ void connection::handle_read_body(const boost::system::error_code& e,
     }
 
   }
+}
+
+void connection::send(const message& msg) {
+
+  outbound = message(msg);
+  message_parser_.dump(msg, response_);
+  boost::asio::async_write(socket_, response_,//outbound.to_buffers(),
+  strand_.wrap(
+    boost::bind(&connection::handle_write, shared_from_this(),
+      boost::asio::placeholders::error)));
 
 }
 
-
-void connection::on_pong(boost::shared_ptr<message> msg) {
-  //std::cout<<"got PONGED!\n";
+void connection::handle_write(const boost::system::error_code& e)
+{
+  if (e)
+  {
+    // Initiate graceful connection closure.
+    boost::system::error_code ignored_ec;
+    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
+  }
 }
 
-void connection::on_foo(boost::shared_ptr<message> msg) {
-  //std::cout << "got FOO\n";
+void connection::on_pong(const message &msg) {
+  std::cout<<"got PONGED!\n";
 }
 
-void connection::on_disconnect(boost::shared_ptr<message> msg) {
-  //std::cout << "client disconnecting\n";
+void connection::on_foo(const message &msg) {
+  std::cout << "got FOO\n";
+}
+
+void connection::on_disconnect(const message &msg) {
+  std::cout << "client disconnecting\n";
   strand_.post( boost::bind(&connection::stop, shared_from_this()));
 }
 } // namespace server3

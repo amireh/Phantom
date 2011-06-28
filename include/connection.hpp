@@ -38,6 +38,7 @@ public:
 
   /// Start the first asynchronous operation for the connection.
   void start();
+  void send(const message& msg);
 
 private:
   // calls stop() and server::close(connection*) to remove us from tracker
@@ -46,9 +47,9 @@ private:
   // forcefully breaks all async ops and closes the socket
   void stop();
 
-  void on_pong(boost::shared_ptr<message> msg);
-  void on_foo(boost::shared_ptr<message> msg);
-  void on_disconnect(boost::shared_ptr<message> msg);
+  void on_pong(const message& msg);
+  void on_foo(const message& msg);
+  void on_disconnect(const message& msg);
 
   void read();
   void read_body();
@@ -63,6 +64,8 @@ private:
     const boost::system::error_code& error,
     std::size_t bytes_transferred);
 
+  void handle_write(const boost::system::error_code& e);
+
   boost::asio::ip::tcp::socket socket_;
   boost::asio::streambuf request_;
   boost::asio::mutable_buffer body_;
@@ -71,7 +74,7 @@ private:
 
   message_parser message_parser_;
   message_handler message_handler_;
-  message msg_;
+  message msg_, outbound;
 
 };
 

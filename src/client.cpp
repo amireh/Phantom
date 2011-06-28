@@ -11,7 +11,7 @@ using boost::asio::ip::tcp;
       port_("60100"),
       strand_(io_service),
       message_parser_(),
-      message_handler_(socket_, strand_, message_parser_),
+      message_handler_(io_service, socket_),
       request_(message::max_length),
       response_(message::max_length),
       timer_(io_service_)
@@ -145,11 +145,11 @@ using boost::asio::ip::tcp;
 
 void client::do_read() {
   std::cout << "reading...\n";
-  async_read_until( socket_, response_, message::footer,
+  /*async_read_until( socket_, response_, message::footer,
     strand_.wrap(
       boost::bind(&client::handle_read, this,
         boost::asio::placeholders::error,
-        boost::asio::placeholders::bytes_transferred)));
+        boost::asio::placeholders::bytes_transferred)));*/
 }
 
 void client::handle_read(const boost::system::error_code& e,
@@ -169,7 +169,7 @@ void client::handle_read(const boost::system::error_code& e,
   // handler returns. The connection class's destructor closes the socket.
 }
 
-void client::on_ping(boost::shared_ptr<message> msg) {
+void client::on_ping(const message &msg) {
   std::cout<<"got PINGED!\n";
   message pong(message_id::pong);
   message_handler_.send(pong, request_);

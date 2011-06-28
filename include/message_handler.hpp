@@ -10,20 +10,21 @@
 #include "message_parser.hpp"
 #include "handler.hpp"
 #include <map>
+#include <deque>
 
 using boost::asio::ip::tcp;
 class message_handler {
   public:
-    typedef boost::function<void(boost::shared_ptr<message>)> msg_handler_t;
+    typedef boost::function<void(const message&)> msg_handler_t;
 
-    message_handler(tcp::socket&, boost::asio::strand&, message_parser&);
+    message_handler(boost::asio::io_service&, tcp::socket&);
     ~message_handler();
 
     void send(const message &msg, boost::asio::streambuf& out);
     void recv(boost::asio::streambuf& in);
 
     template <typename T>
-    void bind(message_id msg, T* inT, void (T::*handler)(boost::shared_ptr<message>)) {
+    void bind(message_id msg, T* inT, void (T::*handler)(const message &)) {
       // register message if it isn't already
       handlers_t::iterator binder = handlers_.find(msg);
       if (binder == handlers_.end())
@@ -35,15 +36,20 @@ class message_handler {
       binder->second.push_back( boost::bind(handler, inT, _1) );
     }
 
-  private:
-    void notify(boost::shared_ptr<message> msg);
+    void notify(const message&);
 
-    message_parser& parser_;
+  private:
+
+    void dispatch();
+
+    //message_parser& parser_;
     tcp::socket* socket_;
-    boost::asio::strand& strand_;
+    boost::asio::strand strand_;
 
     typedef std::map< message_id, std::vector<msg_handler_t> > handlers_t;
     handlers_t handlers_;
+
+    std::deque<message> messages;
 };
 
 #endif

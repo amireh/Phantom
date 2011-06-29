@@ -17,8 +17,6 @@ namespace Net {
     message_handler_.bind(EventUID::Pong, this, &connection::on_pong);
     message_handler_.bind(EventUID::Login, this, &connection::on_foo);
 
-    pingevt_.setProperty("F","B");
-
     //message_parser_.dump(pingmsg_, pinger_);
   }
 

@@ -43,15 +43,19 @@ namespace Net {
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
     Event foo(EventUID::Login);
-    foo.setProperty("Puppet", "ThisIsAVeryLongPuppetName");
+    //foo.Options &= 0;
+    //foo.Options |= Event::NoFormat;
+    //foo.setProperty("Data", "ThisIsAVeryLongPuppetName;asd,lzxoc$!\r\n\r\nFOO");
+    //foo.dump();
+    //return;
     foo.setProperty("Spell", "ThisIsAVeryLongSpellName");
     foo.setProperty("Unit1", "ThisIsAVeryLongUnitName");
     foo.setProperty("Unit2", "ThisIsAVeryLongUnitName");
     foo.setProperty("Unit3", "ThisIsAVeryLongUnitName");
 
     timer_.expires_from_now(boost::posix_time::seconds(2));
-    timer_.wait();
-    conn_->send(foo);
+    timer_.async_wait( boost::bind( &connection::send, conn_, foo ));
+    //conn_->send(foo);
 
     //message foo(message_id::foo);
     //foo.body = "HAI";

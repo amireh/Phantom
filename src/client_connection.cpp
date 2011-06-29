@@ -72,7 +72,7 @@ namespace Net {
     return connected_;
   }
   void connection::disconnect() {
-    send(Event(EventUID::Disconnect));
+    send(Event(EventUID::Logout));
   }
 
   void connection::start() {

@@ -108,14 +108,15 @@ void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
 
   /* splits a string s using the delimiter delim */
 
-  std::vector<std::string> split(const std::string &s, char delim) {
-      std::vector<std::string> elems;
-      std::stringstream ss(s);
-      std::string item;
-      while(std::getline(ss, item, delim)) {
-          elems.push_back(item);
-      }
-      return elems;
+  std::vector<std::string>
+  split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    std::stringstream ss(s);
+    std::string item;
+    while(std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
   }
   bool message_parser::parse(Event& evt,  boost::asio::streambuf& in) {
 
@@ -128,16 +129,17 @@ void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
     std::cout << "received " << bytes_received << "bytes of data\n";
 
     char sp1;
-    unsigned char uid, feedback;
+    unsigned char uid, feedback, flags;
     uint16_t length;
 
     std::istream is(&in);
     is.unsetf(std::ios_base::skipws);
-    is >> uid >> length >> feedback;
+    is >> uid >> flags >> feedback >> length;
 
     evt.UID = (EventUID)uid;
-    evt.Length = length;
+    evt.Options = flags;
     evt.Feedback = (EventFeedback)feedback;
+    evt.Length = length;
 
     // check header's sanity
     if ((evt.UID < EventUID::Unassigned || evt.UID > EventUID::SanityCheck)
@@ -147,26 +149,48 @@ void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
       return false;
     }
 
-    // there must be N bytes of properties where N > in_bytes - signature
-    if (evt.Length > 0 && (bytes_received - Event::HeaderLength - Event::FooterLength < evt.Length)) {
+    // there must be N+sizeof(int) bytes of properties where N > in_bytes - signature
+    if (evt.Length > 0 && (bytes_received - Event::HeaderLength - Event::FooterLength < evt.Length+sizeof(int))) {
       std::cerr << "invalid properties length: " << evt.Length << "\n";
       return false;
     }
 
+    std::cout << "event uid : " << (int)evt.UID << " and length: " << evt.Length << "\n";
+
     // parse properties
     if (evt.Length > 0) {
-      char* props = new char[evt.Length];
-      is >> props;
-      std::vector<std::string> elems = split(props, ',');
+      int checksum;
+      is >> checksum;
+
+      char* props = new char[evt.Length+1];
+      is.rdbuf()->sgetn(props, evt.Length);
+      props[evt.Length] = '\0';
+
+      // verify CRC checksum
+      evt.Checksum = Event::_CRC32(std::string(props));
+      if (evt.Checksum != checksum) {
+        std::cerr << "CRC mismatch, aborting: " << evt.Checksum << " vs " << checksum << " for " << props << "\n";
+        delete props;
+        return false;
+      }
+
+      if ((evt.Options & Event::NoFormat) == Event::NoFormat) {
+        evt.setProperty("Data", props);
+
+        std::cout << "oh loook its an unformatted msg: " << props << "\n";
+      } else {
+        std::vector<std::string> elems = split(props, ',');
+        assert(elems.size() > 0 && elems.size() % 2 == 0);
+
+        for (int i=0; i < elems.size(); i+=2)
+          evt.setProperty(elems[i], elems[i+1]);
+      }
+
       delete props;
-
-      assert(elems.size() > 0 && elems.size() % 2 == 0);
-
-      for (int i=0; i < elems.size(); i+=2)
-        evt.setProperty(elems[i], elems[i+1]);
     }
 
     // skip the footer
+    std::cout << in.size() << " bytes left\n";
     assert(in.size() == Event::FooterLength);
     in.consume(Event::FooterLength);
 
@@ -180,27 +204,32 @@ void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
     //std::cout << "pre-message dump: buffer has " << out.size() << "(expected 0), ";
     std::ostream stream(&out);
 
-    // flatten the properties
     std::string props = "";
     if (!evt.Properties.empty()) {
-      for (auto property : evt.Properties)
-        props += property.first + "," + property.second + ",";
+      // if the event is raw, we've to dump only one property
+      if ((evt.Options & Event::NoFormat) == Event::NoFormat) {
+        // must have this, otherwise discard
+        //assert(evt.hasProperty("Data"));
+        if (evt.hasProperty("Data"))
+          props = evt.getProperty("Data");
+      } else {
+        // flatten properties
+        for (auto property : evt.Properties)
+          props += property.first + "," + property.second + ",";
 
-      props.erase(props.end()-1);
+        props.erase(props.end()-1);
+      }
     }
 
-    std::cout << "ok..." << out.size() << " ";
     stream << (unsigned char)evt.UID;
-    std::cout << out.size() << " ";
-    stream << (uint16_t)props.size();
-    std::cout << out.size() << " ";
+    stream << evt.Options;
     stream << (unsigned char)evt.Feedback;
-    std::cout << out.size() << " ";
-    if (!evt.Properties.empty())
+    stream << (uint16_t)props.size();
+    if (!props.empty()) {
+      stream << Event::_CRC32(props);
       stream << props;
-    std::cout << out.size() << " ";
+    }
     stream << Event::Footer;
-    std::cout << out.size() << "\n ";
 
     //std::cout << "post-dump: " << out.size() << "\n";
   }

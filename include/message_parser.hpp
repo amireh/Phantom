@@ -21,6 +21,7 @@
  *
  */
 
+
 #ifndef H_PixyNet_MessageParser_H
 #define H_PixyNet_MessageParser_H
 
@@ -32,6 +33,7 @@
 #include <stdexcept>
 #include <iostream>
 #include "message.hpp"
+#include "event.hpp"
 
 namespace Pixy {
 namespace Net {
@@ -71,8 +73,12 @@ namespace Net {
       bool parse_body(message& msg, boost::asio::streambuf& in);
       bool parse_all(message &msg, boost::asio::streambuf& in);
 
-      void dump(const message &msg, boost::asio::streambuf& out);
-      void dump(const message &msg, boost::asio::mutable_buffer& out);
+      bool parse_header(Event&, boost::asio::streambuf& in);
+      bool parse_body(Event&, boost::asio::streambuf& in);
+      bool parse_all(Event&, boost::asio::streambuf& in);
+
+      void dump(const message&, boost::asio::streambuf& out);
+      void dump(const Event&, boost::asio::streambuf& out);
 
     private:
       /// Handle the next character of input.
@@ -82,3 +88,4 @@ namespace Net {
 }
 }
 #endif
+

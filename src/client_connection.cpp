@@ -33,7 +33,8 @@ namespace Net {
       port_(port),
       connected_(false)
   {
-    message_handler_.bind(message_id::ping, this, &connection::on_ping);
+    //message_handler_.bind(message_id::ping, this, &connection::on_ping);
+    message_handler_.bind(EventUID::Ping, this, &connection::on_ping);
   }
 
   connection::~connection() {
@@ -79,9 +80,14 @@ namespace Net {
 
   }
 
-  void connection::on_ping(const message &msg) {
+  /*void connection::on_ping(const message &msg) {
     std::cout<<"got PINGED!\n";
     send(message(message_id::pong));
+  }*/
+
+  void connection::on_ping(const Event& evt) {
+    std::cout<<"got PINGED!\n";
+    send(Event(EventUID::Pong));
   }
 
 } // namespace server3

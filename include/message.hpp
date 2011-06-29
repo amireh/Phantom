@@ -77,7 +77,13 @@ namespace Net {
       length = 0;
     }
 
-    std::vector<boost::asio::const_buffer> to_buffers();
+    template <typename Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+      ar & id;
+      ar & length;
+      ar & body;
+    }
 
     enum {
       header_length = sizeof(message_id) + sizeof(uint16_t) + (sizeof(char)*2),

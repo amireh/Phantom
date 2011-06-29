@@ -104,5 +104,66 @@ void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
   //out.prepare(sizeof(unsigned char) + 2 + sizeof(uint16_t) + msg.body.size());
 }
 
+
+
+
+/* ----- event handling ----- */
+
+bool message_parser::parse_header(Event& evt,  boost::asio::streambuf& in) {
+
+  if (in.size() < message::header_length) {
+    std::cerr << "message size is smaller than header!!\n";
+    return false;
+  }
+
+  std::cout << "received " << in.size() << "bytes of data\n";
+
+  char sp1;
+  unsigned char uid, feedback;
+  char length[sizeof(uint16_t)];
+
+  std::istream is(&in);
+  is.unsetf(std::ios_base::skipws);
+  is >> uid >> sp1 >> length >> sp1 >> feedback >> sp1;
+
+  evt.UID = (EventUID)uid;
+  evt.Length = atoi(length);
+  evt.Feedback = (EventFeedback)feedback;
+
+  std::string pn, pv;
+  bool delim_found = false;
+  char c;
+  while (is.good()) {
+    //if (pn.empty()) { // parse the property name
+      while (true) {
+        is.get(c);
+        if (c == ' ')
+          break;
+
+        pn.push_back(c);
+      }
+    //} else { // parse the property value
+      while (true) {
+        is.get(c);
+        if (c == ' ')
+          break;
+
+        pv.push_back(c);
+      }
+      evt.setProperty(pn, pv);
+      pn.clear();
+      pv.clear();
+    //}
+  }
+  //std::cout<< "msg id=" << (unsigned char)msg.id << ", length=" << msg.length << "(" << msg_length << ")\n";
+
+  //assert(msg.id > message_id::unassigned && msg.id < message_id::placeholder);
+  //assert(atoi(msg_length) <= message::max_length);
+
+  if (evt.UID > EventUID::Unassigned && evt.UID < EventUID::SanityCheck && evt.Length <= Event::MaxLength)
+  //  return true;
+
+  return false;
+}
 }
 }

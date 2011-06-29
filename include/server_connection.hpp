@@ -48,11 +48,13 @@ class connection : public base_connection
   protected:
 
   void on_pong(const message& msg);
-  void on_foo(const message& msg);
+  void on_pong(const Event& msg);
+  void on_foo(const Event& msg);
   void on_disconnect(const message& msg);
 
-  boost::asio::streambuf pinger_;
+  //boost::asio::streambuf pinger_;
   message pingmsg_;
+  Event pingevt_;
   int ping_timeouts_;
 };
 

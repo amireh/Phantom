@@ -31,6 +31,8 @@
 #include <exception>
 #include <stdexcept>
 #include "message_parser.hpp"
+#include "message.hpp"
+#include "event.hpp"
 #include <map>
 #include <deque>
 
@@ -40,6 +42,7 @@ namespace Net {
   class message_handler {
     public:
       typedef boost::function<void(const message&)> msg_handler_t;
+      typedef boost::function<void(const Event&)> evt_handler_t;
 
       message_handler(boost::asio::io_service&);
       ~message_handler();
@@ -50,11 +53,24 @@ namespace Net {
       template <typename T>
       void bind(message_id msg, T* inT, void (T::*handler)(const message &)) {
         // register message if it isn't already
-        handlers_t::iterator binder = handlers_.find(msg);
-        if (binder == handlers_.end())
+        msg_handlers_t::iterator binder = msg_handlers_.find(msg);
+        if (binder == msg_handlers_.end())
         {
           std::vector<msg_handler_t> handlers;
-          binder = handlers_.insert(make_pair(msg, handlers)).first;
+          binder = msg_handlers_.insert(make_pair(msg, handlers)).first;
+        }
+
+        binder->second.push_back( boost::bind(handler, inT, _1) );
+      }
+
+      template <typename T>
+      void bind(EventUID evt, T* inT, void (T::*handler)(const Event&)) {
+        // register message if it isn't already
+        evt_handlers_t::iterator binder = evt_handlers_.find(evt);
+        if (binder == evt_handlers_.end())
+        {
+          std::vector<evt_handler_t> handlers;
+          binder = evt_handlers_.insert(make_pair(evt, handlers)).first;
         }
 
         binder->second.push_back( boost::bind(handler, inT, _1) );
@@ -64,16 +80,21 @@ namespace Net {
       // @note: the message might not be dispatched immediately, as it will be
       // queued internally and later on dispatched through the strand object
       void deliver(const message&);
+      void deliver(const Event&);
 
     private:
-      void dispatch();
+      void dispatch_evt();
+      void dispatch_msg();
 
       boost::asio::strand strand_;
 
-      typedef std::map< message_id, std::vector<msg_handler_t> > handlers_t;
-      handlers_t handlers_;
+      typedef std::map< message_id, std::vector<msg_handler_t> > msg_handlers_t;
+      typedef std::map< EventUID , std::vector<evt_handler_t> > evt_handlers_t;
+      msg_handlers_t msg_handlers_;
+      evt_handlers_t evt_handlers_;
 
       std::deque<message> messages;
+      std::deque<Event> events;
   };
 
 }

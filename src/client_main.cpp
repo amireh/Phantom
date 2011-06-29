@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
       clients.push_back(new Pixy::Net::client(io_service));
 
     boost::thread_group threads;
-    for (int i=0; i < 3; ++i)
+    for (int i=0; i < 2; ++i)
       threads.create_thread(boost::bind(&boost::asio::io_service::run, &io_service));
 
     std::cout << "press [return] to quit\n";

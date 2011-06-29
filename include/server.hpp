@@ -35,6 +35,7 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread.hpp>
 #include "message.hpp"
+#include "event.hpp"
 #include "server_connection.hpp"
 
 namespace Pixy {

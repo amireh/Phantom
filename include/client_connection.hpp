@@ -48,7 +48,8 @@ namespace Net {
     virtual void start();
 
   protected:
-    void on_ping(const message &);
+    //void on_ping(const message &);
+    void on_ping(const Event&);
 
     tcp::resolver resolver_;
     std::string host_, port_;

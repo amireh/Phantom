@@ -27,7 +27,7 @@ namespace Pixy {
 namespace Net {
 
 const char* message::footer = "\r\n\r\n";
-
+/*
 std::vector<boost::asio::const_buffer> message::to_buffers() {
   std::string me;
   me.push_back((unsigned char)id);
@@ -43,6 +43,6 @@ std::vector<boost::asio::const_buffer> message::to_buffers() {
 
   return buffers;
 }
-
+*/
 }
 }

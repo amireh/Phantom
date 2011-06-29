@@ -40,14 +40,27 @@ namespace Net {
       throw e;
     }
 
-    message foo(message_id::foo);
-    foo.body = "HAI";
+    std::cout << "Size of events : " << sizeof(Event) << "b\n";
+
+    Event foo(EventUID::Login);
+    foo.setProperty("Puppet", "ThisIsAVeryLongPuppetName");
+    foo.setProperty("Spell", "ThisIsAVeryLongSpellName");
+    foo.setProperty("Unit1", "ThisIsAVeryLongUnitName");
+    foo.setProperty("Unit2", "ThisIsAVeryLongUnitName");
+    foo.setProperty("Unit3", "ThisIsAVeryLongUnitName");
+
+    timer_.expires_from_now(boost::posix_time::seconds(2));
+    timer_.wait();
+    conn_->send(foo);
+
+    //message foo(message_id::foo);
+    //foo.body = "HAI";
     for (int i=0; i < 3; ++i) {
-      conn_->send(foo);
-      timer_.expires_from_now(boost::posix_time::seconds(2));
-      //timer_.wait();
+      //conn_->send(Event("Pong"));
+
     }
 
+    std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
     //timer_.async_wait(boost::bind(&client::disconnect, this, boost::asio::placeholders::error));
     //send_req();

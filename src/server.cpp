@@ -64,7 +64,7 @@ void server::run()
 
   std::cout << "Server up, accepting connections on " << thread_pool_size_ << " threads\n";
   std::cout
-    << "Messages header length: " << message::header_length << "\n";
+    << "Messages header length: " << Event::HeaderLength << ", footer length: " << Event::FooterLength << "\n";
 
   // start our player ping timer
   refresh_timer();

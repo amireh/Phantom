@@ -3,6 +3,7 @@
 namespace Pixy {
 namespace Net {
 
+  const char* Event::Footer = "\r\n\r\n";
 	Event::Event() {
     reset();
   }
@@ -24,6 +25,8 @@ namespace Net {
     UID = EventUID::Unassigned;
 		//Type = EventType::Unassigned;
 		Feedback = EventFeedback::Unassigned;
+    Properties.clear();
+    Length = 0;
 		//nrHandlers = 0;
 		//nrProperties = 0;
 		//fLocal = false;
@@ -49,6 +52,7 @@ namespace Net {
 		//this->Name = src.mName;
 		//this->Type = src.mType;
 		this->Feedback = src.Feedback;
+    this->Length = src.Length;
 		//this->NrProperties = src.nrProperties;
     //this->mAny = src.mAny;
 
@@ -144,7 +148,7 @@ namespace Net {
 	void Event::dump(std::ostream& inStream) const {
 		inStream
       << "uid: " << (int)UID << "\n"
-      //<< "name: " << mName << "\n"
+      << "length: " << Length << "\n"
       //<< "type: " << (mType == EventType::Request ? "request" : "response") << "\n"
       << "feedback: " << (Feedback == EventFeedback::Error ? "error" : "ok") << "\n"
       //<< "current handlers count: " << nrHandlers << "\n"

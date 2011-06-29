@@ -6,7 +6,7 @@ SET(Project_SRCS
   #pconnection.cpp
   #io_service_pool.cpp
   server.cpp
-  message.cpp
+  #message.cpp
   message_parser.cpp
   message_handler.cpp
   server_main.cpp
@@ -20,7 +20,7 @@ SET(Project_SRCS
   client.cpp
   base_connection.cpp
   client_connection.cpp
-  message.cpp
+  #message.cpp
   event.cpp
   message_parser.cpp
   message_handler.cpp

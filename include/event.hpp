@@ -6,17 +6,7 @@
 #include <map>
 #include <string>
 #include <iostream>
-
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-
-#include <boost/serialization/serialization.hpp>
-#include <boost/serialization/level.hpp>
-#include <boost/serialization/tracking.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/utility.hpp>
-#include <boost/serialization/map.hpp>
-
+#include <cstring>
 
 using std::ostream;
 using std::map;
@@ -34,6 +24,7 @@ namespace Net {
     DrawSpells,
     Ping,
     Pong,
+    Disconnect,
 
     SanityCheck
   };
@@ -58,8 +49,10 @@ namespace Net {
   struct Event {
 
     enum {
-      HeaderLength = 7, // "UID Length Feedback "
-      FooterLength = 4, // "\r\n\r\n"
+      // if the Length is small enough it will be cast to 1 byte thus we can't
+      // depend on uint16_t being interpreted as 2 bytes long.. so we -1
+      HeaderLength = sizeof(unsigned char) * 2 + sizeof(uint16_t) - 1, // "UIDLengthFeedback"
+      FooterLength = strlen("\r\n\r\n"), // "\r\n\r\n"
       MaxLength = 65536, // no single message can be longer than this (stored in uint16_t)
       //gmax_length = 512
     };
@@ -112,7 +105,7 @@ namespace Net {
     virtual void setAny(void* any);
     virtual void* getAny();*/
 
-    template <typename Archive>
+    /*template <typename Archive>
     void serialize(Archive& ar, const unsigned int version)
     {
       ar & UID;
@@ -121,7 +114,9 @@ namespace Net {
       ar & Feedback;
       //ar & nrProperties;
       ar & Properties;
-    }
+    }*/
+
+    static const char* Footer;
 
     virtual void reset();
 
@@ -137,6 +132,7 @@ namespace Net {
 		//int			        NrHandlers;
 		//int			        nrProperties;
 		property_t		  Properties;
+    //bool            Raw;
 		//void*           mAny;
 
 	//private:

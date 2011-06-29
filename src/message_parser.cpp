@@ -29,7 +29,7 @@ namespace Net {
 
 message_parser::message_parser() {
 }
-
+/*
 bool message_parser::parse_header(message& msg,  boost::asio::streambuf& in) {
 
   if (in.size() < message::header_length) {
@@ -104,66 +104,105 @@ void message_parser::dump(message const& msg, boost::asio::streambuf& out) {
   //out.prepare(sizeof(unsigned char) + 2 + sizeof(uint16_t) + msg.body.size());
 }
 
+*/
 
+  /* splits a string s using the delimiter delim */
 
+  std::vector<std::string> split(const std::string &s, char delim) {
+      std::vector<std::string> elems;
+      std::stringstream ss(s);
+      std::string item;
+      while(std::getline(ss, item, delim)) {
+          elems.push_back(item);
+      }
+      return elems;
+  }
+  bool message_parser::parse(Event& evt,  boost::asio::streambuf& in) {
 
-/* ----- event handling ----- */
+    int bytes_received = in.size();
+    if (bytes_received < Event::HeaderLength + Event::FooterLength) {
+      std::cerr << "message is too short!!\n";
+      return false;
+    }
 
-bool message_parser::parse_header(Event& evt,  boost::asio::streambuf& in) {
+    std::cout << "received " << bytes_received << "bytes of data\n";
 
-  if (in.size() < message::header_length) {
-    std::cerr << "message size is smaller than header!!\n";
-    return false;
+    char sp1;
+    unsigned char uid, feedback;
+    uint16_t length;
+
+    std::istream is(&in);
+    is.unsetf(std::ios_base::skipws);
+    is >> uid >> length >> feedback;
+
+    evt.UID = (EventUID)uid;
+    evt.Length = length;
+    evt.Feedback = (EventFeedback)feedback;
+
+    // check header's sanity
+    if ((evt.UID < EventUID::Unassigned || evt.UID > EventUID::SanityCheck)
+        || (evt.Length > Event::MaxLength)
+        || (evt.Feedback < EventFeedback::Unassigned || evt.Feedback > EventFeedback::InvalidRequest)) {
+      std::cerr << "request failed header sanity check\n";
+      return false;
+    }
+
+    // there must be N bytes of properties where N > in_bytes - signature
+    if (evt.Length > 0 && (bytes_received - Event::HeaderLength - Event::FooterLength < evt.Length)) {
+      std::cerr << "invalid properties length: " << evt.Length << "\n";
+      return false;
+    }
+
+    // parse properties
+    if (evt.Length > 0) {
+      char* props = new char[evt.Length];
+      is >> props;
+      std::vector<std::string> elems = split(props, ',');
+      delete props;
+
+      assert(elems.size() > 0 && elems.size() % 2 == 0);
+
+      for (int i=0; i < elems.size(); i+=2)
+        evt.setProperty(elems[i], elems[i+1]);
+    }
+
+    // skip the footer
+    assert(in.size() == Event::FooterLength);
+    in.consume(Event::FooterLength);
+
+    evt.dump();
+
+    return true;
   }
 
-  std::cout << "received " << in.size() << "bytes of data\n";
+  void message_parser::dump(Event const& evt, boost::asio::streambuf& out) {
 
-  char sp1;
-  unsigned char uid, feedback;
-  char length[sizeof(uint16_t)];
+    //std::cout << "pre-message dump: buffer has " << out.size() << "(expected 0), ";
+    std::ostream stream(&out);
 
-  std::istream is(&in);
-  is.unsetf(std::ios_base::skipws);
-  is >> uid >> sp1 >> length >> sp1 >> feedback >> sp1;
+    // flatten the properties
+    std::string props = "";
+    if (!evt.Properties.empty()) {
+      for (auto property : evt.Properties)
+        props += property.first + "," + property.second + ",";
 
-  evt.UID = (EventUID)uid;
-  evt.Length = atoi(length);
-  evt.Feedback = (EventFeedback)feedback;
+      props.erase(props.end()-1);
+    }
 
-  std::string pn, pv;
-  bool delim_found = false;
-  char c;
-  while (is.good()) {
-    //if (pn.empty()) { // parse the property name
-      while (true) {
-        is.get(c);
-        if (c == ' ')
-          break;
+    std::cout << "ok..." << out.size() << " ";
+    stream << (unsigned char)evt.UID;
+    std::cout << out.size() << " ";
+    stream << (uint16_t)props.size();
+    std::cout << out.size() << " ";
+    stream << (unsigned char)evt.Feedback;
+    std::cout << out.size() << " ";
+    if (!evt.Properties.empty())
+      stream << props;
+    std::cout << out.size() << " ";
+    stream << Event::Footer;
+    std::cout << out.size() << "\n ";
 
-        pn.push_back(c);
-      }
-    //} else { // parse the property value
-      while (true) {
-        is.get(c);
-        if (c == ' ')
-          break;
-
-        pv.push_back(c);
-      }
-      evt.setProperty(pn, pv);
-      pn.clear();
-      pv.clear();
-    //}
+    //std::cout << "post-dump: " << out.size() << "\n";
   }
-  //std::cout<< "msg id=" << (unsigned char)msg.id << ", length=" << msg.length << "(" << msg_length << ")\n";
-
-  //assert(msg.id > message_id::unassigned && msg.id < message_id::placeholder);
-  //assert(atoi(msg_length) <= message::max_length);
-
-  if (evt.UID > EventUID::Unassigned && evt.UID < EventUID::SanityCheck && evt.Length <= Event::MaxLength)
-  //  return true;
-
-  return false;
-}
 }
 }

@@ -31,7 +31,7 @@
 #include <exception>
 #include <stdexcept>
 #include "message_parser.hpp"
-#include "message.hpp"
+//#include "message.hpp"
 #include "event.hpp"
 #include <map>
 #include <deque>
@@ -41,15 +41,13 @@ namespace Pixy {
 namespace Net {
   class message_handler {
     public:
-      typedef boost::function<void(const message&)> msg_handler_t;
+      //typedef boost::function<void(const message&)> msg_handler_t;
       typedef boost::function<void(const Event&)> evt_handler_t;
 
       message_handler(boost::asio::io_service&);
       ~message_handler();
 
-      void send(const message &msg, boost::asio::streambuf& out);
-      void recv(boost::asio::streambuf& in);
-
+#if 0 // __DISABLED__ !messages
       template <typename T>
       void bind(message_id msg, T* inT, void (T::*handler)(const message &)) {
         // register message if it isn't already
@@ -62,6 +60,7 @@ namespace Net {
 
         binder->second.push_back( boost::bind(handler, inT, _1) );
       }
+#endif
 
       template <typename T>
       void bind(EventUID evt, T* inT, void (T::*handler)(const Event&)) {
@@ -79,21 +78,21 @@ namespace Net {
       // delivers a local copy of the message to bound handlers
       // @note: the message might not be dispatched immediately, as it will be
       // queued internally and later on dispatched through the strand object
-      void deliver(const message&);
+      //void deliver(const message&);
       void deliver(const Event&);
 
     private:
-      void dispatch_evt();
-      void dispatch_msg();
+      void dispatch();
+      //void dispatch_msg();
 
       boost::asio::strand strand_;
 
-      typedef std::map< message_id, std::vector<msg_handler_t> > msg_handlers_t;
+      //typedef std::map< message_id, std::vector<msg_handler_t> > msg_handlers_t;
       typedef std::map< EventUID , std::vector<evt_handler_t> > evt_handlers_t;
-      msg_handlers_t msg_handlers_;
+      //msg_handlers_t msg_handlers_;
       evt_handlers_t evt_handlers_;
 
-      std::deque<message> messages;
+      //std::deque<message> messages;
       std::deque<Event> events;
   };
 

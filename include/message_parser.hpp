@@ -32,7 +32,7 @@
 #include <exception>
 #include <stdexcept>
 #include <iostream>
-#include "message.hpp"
+//#include "message.hpp"
 #include "event.hpp"
 
 namespace Pixy {
@@ -64,25 +64,16 @@ namespace Net {
 
   class message_parser {
     public:
-    typedef boost::asio::buffers_iterator<
-      boost::asio::streambuf::const_buffers_type> iterator;
 
       message_parser();
 
-      bool parse_header(message &msg, boost::asio::streambuf& in);
-      bool parse_body(message& msg, boost::asio::streambuf& in);
-      bool parse_all(message &msg, boost::asio::streambuf& in);
+      bool parse(Event&, boost::asio::streambuf& in);
 
-      bool parse_header(Event&, boost::asio::streambuf& in);
-      bool parse_body(Event&, boost::asio::streambuf& in);
-      bool parse_all(Event&, boost::asio::streambuf& in);
-
-      void dump(const message&, boost::asio::streambuf& out);
       void dump(const Event&, boost::asio::streambuf& out);
 
     private:
-      /// Handle the next character of input.
-      boost::tribool consume(message& msg, char input);
+      bool parse_header(Event&, boost::asio::streambuf& in);
+      bool parse_body(Event&, boost::asio::streambuf& in);
   };
 
 }

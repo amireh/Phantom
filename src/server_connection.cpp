@@ -6,7 +6,7 @@ namespace Net {
 
   connection::connection(boost::asio::io_service& io_service)
     : base_connection(io_service),
-      pingmsg_(message_id::ping),
+      //pingmsg_(message_id::ping),
       pingevt_(EventUID::Ping),
       ping_timeouts_(0)
   {
@@ -16,6 +16,8 @@ namespace Net {
 
     message_handler_.bind(EventUID::Pong, this, &connection::on_pong);
     message_handler_.bind(EventUID::Login, this, &connection::on_foo);
+
+    pingevt_.setProperty("F","B");
 
     //message_parser_.dump(pingmsg_, pinger_);
   }
@@ -44,11 +46,11 @@ namespace Net {
       }
     }*/
   }
-
+/*
   void connection::on_pong(const message &msg) {
     std::cout<<"got PONGED!\n";
     ping_timeouts_ = 0;
-  }
+  }*/
 
   void connection::on_pong(const Event &msg) {
     std::cout<<"got PONGED!\n";
@@ -59,11 +61,11 @@ namespace Net {
     std::cout << "got FOO: \n";
     evt.dump();
   }
-
+/*
   void connection::on_disconnect(const message &msg) {
     std::cout << "client disconnecting\n";
     strand_.post( boost::bind(&connection::stop, shared_from_this()));
-  }
+  }*/
 
 } // namespace Net
 } // namespace Pixy

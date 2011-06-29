@@ -30,28 +30,21 @@ message_handler::message_handler(boost::asio::io_service& io_service)
 }
 
 message_handler::~message_handler() {
-  messages.clear();
+  events.clear();
 }
 
-void message_handler::send(const message &msg, boost::asio::streambuf& out) {
-}
-
-void message_handler::recv(boost::asio::streambuf& in) {
-
-}
-
-void message_handler::deliver(const message& msg) {
+/*void message_handler::deliver(const message& msg) {
   messages.push_back(message(msg));
 
   strand_.post( boost::bind( &message_handler::dispatch_msg, this ) );
+}*/
+
+void message_handler::deliver(const Event& evt) {
+  events.push_back(Event(evt));
+
+  strand_.post( boost::bind( &message_handler::dispatch, this ) );
 }
-
-void message_handler::deliver(const Event& msg) {
-  events.push_back(Event(msg));
-
-  strand_.post( boost::bind( &message_handler::dispatch_evt, this ) );
-}
-
+/*
 void message_handler::dispatch_msg() {
   const message& msg = messages.front();
 
@@ -62,8 +55,8 @@ void message_handler::dispatch_msg() {
       handler( msg );
       //socket_->get_io_service().post( strand_.wrap( boost::bind(handler, msg) ) );
 }
-
-void message_handler::dispatch_evt() {
+*/
+void message_handler::dispatch() {
   const Event& evt = events.front();
 
   evt_handlers_t::const_iterator handlers = evt_handlers_.find(evt.UID);

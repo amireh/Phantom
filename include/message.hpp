@@ -21,6 +21,8 @@
  *
  */
 
+#if 0
+
 #ifndef H_PixyNet_Message_H
 #define H_PixyNet_Message_H
 
@@ -95,4 +97,6 @@ namespace Net {
 
 }
 }
+#endif
+
 #endif

@@ -34,11 +34,11 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <iomanip>
-#include "message.hpp"
+//#include <boost/archive/text_iarchive.hpp>
+//#include <boost/archive/text_oarchive.hpp>
+//#include <boost/tuple/tuple.hpp>
+//#include <iomanip>
+//#include "message.hpp"
 #include "message_parser.hpp"
 #include "message_handler.hpp"
 #include "event.hpp"
@@ -65,11 +65,11 @@ namespace Net {
     /// forcefully breaks all async ops and closes the socket
     virtual void stop();
 
-    virtual void send(const message& msg);
+    //virtual void send(const message& msg);
     virtual void send(const Event& evt);
 
     /// Asynchronously write a data structure to the socket.
-    template <typename T, typename Handler>
+    /*template <typename T, typename Handler>
     void async_write(const T& t, Handler handler)
     {
       // Serialize the data first so we know how large it is.
@@ -180,16 +180,15 @@ namespace Net {
         // Inform caller that data has been received ok.
         boost::get<0>(handler)(e);
       }
-    }
+    }*/
 
   protected:
 
     virtual void read();
     virtual void do_read();
 
-
-    virtual void send_msg(const message& msg);
-    virtual void send_evt(const Event& msg);
+    //virtual void send_msg(const message& msg);
+    virtual void do_send(const Event& msg);
 
 #if 0 // __DISABLED__
     virtual void
@@ -204,36 +203,26 @@ namespace Net {
       const boost::system::error_code& error,
       std::size_t bytes_transferred);
 
+    virtual void handle_write( const boost::system::error_code& e);
+    virtual void handle_read( const boost::system::error_code& e);
+#endif // __DISABLED__
+
     virtual void
     handle_read_all(
       const boost::system::error_code& error,
       std::size_t bytes_transferred);
-#endif // __DISABLED__
-    virtual void handle_write( const boost::system::error_code& e);
-    virtual void handle_read( const boost::system::error_code& e);
-
 
     boost::asio::ip::tcp::socket socket_;
-    //boost::asio::streambuf request_;
-    //boost::asio::mutable_buffer body_;
-    //boost::asio::streambuf response_;
+    boost::asio::streambuf request_;
+    boost::asio::mutable_buffer body_;
+    boost::asio::streambuf response_;
     boost::asio::strand strand_;
 
-    //message_parser message_parser_;
+    message_parser message_parser_;
     message_handler message_handler_;
     //message outbound, inbound;
     Event outbound, inbound;
 
-  /// The size of a fixed length header.
-  enum { header_length = 2 };
-  /// Holds an outbound header.
-  std::string outbound_header_;
-  /// Holds the outbound data.
-  std::string outbound_data_;
-  /// Holds an inbound header.
-  char inbound_header_[header_length];
-  /// Holds the inbound data.
-  std::vector<char> inbound_data_;
   };
 
   typedef boost::shared_ptr<base_connection> base_connection_ptr;

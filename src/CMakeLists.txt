@@ -7,6 +7,9 @@ SET(Project_SRCS
   message_handler.cpp
   server_main.cpp
   event.cpp
+  db_manager.cpp
+  player.cpp
+  #instance.cpp
 )
 # the executable
 ADD_EXECUTABLE(Server ${Project_SRCS})

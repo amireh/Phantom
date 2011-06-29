@@ -22,6 +22,7 @@
  */
 
 #include "server.hpp"
+#include "db_manager.hpp"
 
 namespace Pixy {
 namespace Net {
@@ -48,6 +49,8 @@ server::server()
   acceptor_.async_accept(new_connection_->socket(),
       boost::bind(&server::handle_accept, this,
         boost::asio::placeholders::error));
+
+
 }
 
 server& server::singleton() {
@@ -69,8 +72,13 @@ void server::run()
   // start our player ping timer
   refresh_timer();
 
+  DBManager* dbmgr = new DBManager(io_service_);
+  dbmgr->connect();
+  //delete dbmgr;
+
   // Wait for all threads in the pool to exit.
   workers.join_all();
+  delete dbmgr;
 }
 
 void server::work() {

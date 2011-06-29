@@ -1,0 +1,32 @@
+* server accepts connections:
+* a new connection is accepted:
+  * read the header
+  * if header is valid:
+    # read body
+    # give a COPY of the message to the instance object
+    # destroy local message
+    # repeat reading
+  * if header is invalid:
+    # terminate connection:
+      * if connection was authentic (a logged in player):
+        # send DISCONNECTED
+
+      * ask server to stop tracking us
+
+  notes:
+    1) reading and sending of messages can be done concurrently
+    2) two buffers are needed: one for reading requests, and the other for sending requests
+    3) messages should be created by the connection and only for the duration of the
+       operation: read/send
+    4) no more than one operation of a type should be done concurrently, ie:
+       only 1 read at a time, and only 1 write at a time .. either use a strand
+       to enforce this, or use a queue.. with a strand:
+
+      when the Instance needs to send a message, it calls the connection:
+        connection->send(message || event)
+      the connection then pushes an async_write using a strand. the argument
+      will *always* be copied: whether it was an event or a message
+
+
+      for reading, we start listening when the connection is open.. once a full
+      message is parsed as above, we start the chain again

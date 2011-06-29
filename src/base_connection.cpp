@@ -30,7 +30,6 @@ namespace Net {
 base_connection::base_connection(boost::asio::io_service& io_service)
   : strand_(io_service),
     socket_(io_service),
-    message_parser_(),
     message_handler_(io_service),
     request_(Event::MaxLength),
     response_(Event::MaxLength)
@@ -108,7 +107,7 @@ void base_connection::handle_read_all(
   std::size_t bytes_transferred)
 {
   if (!e) {
-    bool result = message_parser_.parse(inbound, request_);
+    bool result = inbound.fromStream(request_);
     if (result) {
       request_.consume(bytes_transferred);
       // message is ready for dispatching
@@ -226,7 +225,7 @@ void base_connection::do_send(const Event& evt) {
   boost::system::error_code ec;
 
   outbound = Event(evt);
-  message_parser_.dump(outbound, response_);
+  outbound.toStream(response_);
   size_t n = boost::asio::write(socket_, response_.data(), boost::asio::transfer_all(), ec);
   /*this->async_write(outbound,
           boost::bind(&base_connection::handle_write, shared_from_this(),

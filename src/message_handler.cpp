@@ -22,6 +22,7 @@
  */
 
 #include "message_handler.hpp"
+
 namespace Pixy {
 namespace Net {
 

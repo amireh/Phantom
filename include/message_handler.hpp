@@ -30,11 +30,9 @@
 #include <boost/bind.hpp>
 #include <exception>
 #include <stdexcept>
-#include "message_parser.hpp"
-//#include "message.hpp"
-#include "event.hpp"
 #include <map>
 #include <deque>
+#include "event.hpp"
 
 using boost::asio::ip::tcp;
 namespace Pixy {
@@ -46,21 +44,6 @@ namespace Net {
 
       message_handler(boost::asio::io_service&);
       ~message_handler();
-
-#if 0 // __DISABLED__ !messages
-      template <typename T>
-      void bind(message_id msg, T* inT, void (T::*handler)(const message &)) {
-        // register message if it isn't already
-        msg_handlers_t::iterator binder = msg_handlers_.find(msg);
-        if (binder == msg_handlers_.end())
-        {
-          std::vector<msg_handler_t> handlers;
-          binder = msg_handlers_.insert(make_pair(msg, handlers)).first;
-        }
-
-        binder->second.push_back( boost::bind(handler, inT, _1) );
-      }
-#endif
 
       template <typename T>
       void bind(EventUID evt, T* inT, void (T::*handler)(const Event&)) {
@@ -83,16 +66,12 @@ namespace Net {
 
     private:
       void dispatch();
-      //void dispatch_msg();
 
       boost::asio::strand strand_;
 
-      //typedef std::map< message_id, std::vector<msg_handler_t> > msg_handlers_t;
       typedef std::map< EventUID , std::vector<evt_handler_t> > evt_handlers_t;
-      //msg_handlers_t msg_handlers_;
       evt_handlers_t evt_handlers_;
 
-      //std::deque<message> messages;
       std::deque<Event> events;
   };
 

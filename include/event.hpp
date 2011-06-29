@@ -1,5 +1,28 @@
-#ifndef H_Event_H
-#define H_Event_H
+/*
+ *  Copyright (c) 2011 Ahmad Amireh <ahmad@amireh.net>
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a
+ *  copy of this software and associated documentation files (the "Software"),
+ *  to deal in the Software without restriction, including without limitation
+ *  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *  and/or sell copies of the Software, and to permit persons to whom the
+ *  Software is furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ *  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *  SOFTWARE.
+ *
+ */
+
+#ifndef H_PixyNet_Event_H
+#define H_PixyNet_Event_H
 
 #include <vector>
 #include <exception>
@@ -8,9 +31,34 @@
 #include <iostream>
 #include <cstring>
 #include <boost/crc.hpp>
+#include <boost/asio.hpp>
 
 namespace Pixy {
 namespace Net {
+
+  class request_incomplete : public std::runtime_error {
+    public:
+
+    request_incomplete(std::string msg, int in_bytes_left)
+    : std::runtime_error(msg),
+      bytes_left(in_bytes_left) {
+    }
+    virtual ~request_incomplete() throw() {
+    }
+
+    int bytes_left;
+  };
+
+  class bad_request : public std::runtime_error {
+    public:
+
+    bad_request(std::string msg)
+    : std::runtime_error(msg) {
+    }
+    virtual ~bad_request() throw() {
+    }
+
+  };
 
   /*enum class EventType : unsigned char {
     Unassigned = 0,
@@ -110,14 +158,15 @@ namespace Net {
 		//! resets evt state
 		~Event();
 
+    bool fromStream(boost::asio::streambuf& in);
+    void toStream(boost::asio::streambuf& out) const;
+
     //! resets event state
     void reset();
 
 		std::string const& getProperty(std::string inName) const;
 		void setProperty(const std::string inName, const std::string inValue);
     bool hasProperty(const std::string inName) const;
-
-
 
     /// debug
 		void dump(std::ostream& inStream = std::cout) const;

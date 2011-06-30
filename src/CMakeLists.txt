@@ -9,6 +9,7 @@ SET(Project_SRCS
   event.cpp
   db_manager.cpp
   player.cpp
+  sresource_manager.cpp
   #instance.cpp
 )
 # the executable

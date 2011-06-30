@@ -179,6 +179,7 @@ namespace Net {
     uint16_t            Length;
 		int                 Checksum;
     property_t		      Properties;
+    uint32_t            Rawsize;
     static const char   *Footer;
 
     static int _CRC32(const std::string& my_string);

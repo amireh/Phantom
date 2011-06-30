@@ -31,6 +31,7 @@ namespace Net {
 		Feedback = EventFeedback::Unassigned;
     Length = 0;
     Checksum = 0;
+    Rawsize = 0;
     Properties.clear();
 	}
 
@@ -52,6 +53,7 @@ namespace Net {
     this->Options = src.Options;
 		this->Feedback = src.Feedback;
     this->Length = src.Length;
+    this->Rawsize = src.Rawsize;
     this->Checksum = src.Checksum;
 
     if (!src.Properties.empty())
@@ -125,26 +127,26 @@ namespace Net {
       return false;
     }
 
-    //std::cout << "received " << bytes_received << "bytes of data\n";
+    std::cout << "received " << bytes_received << "bytes of data\n";
 
     char sp1;
     unsigned char uid, feedback, flags;
     uint16_t length;
-    char clength[2] = {0};
-    char header[3] = {0};
+    //char clength[2] = {0};
+    //char header[3] = {0};
 
     std::istream is(&in);
     is.unsetf(std::ios_base::skipws);
-    //is >> uid >> flags >> feedback;// >> length;
-    is.rdbuf()->sgetn(header,3);
-    is.rdbuf()->sgetn(clength, 2);
-    clength[2] = '\0';
-    //is.get();
+    is >> uid >> flags >> feedback >> length;
+    //is.rdbuf()->sgetn(header,3);
+    //is.rdbuf()->sgetn(clength, 2);
+    //clength[2] = '\0';
+    is.get();
 
-    this->UID = (EventUID)header[0];
-    this->Options = (unsigned char)header[1];
-    this->Feedback = (EventFeedback)header[2];
-    this->Length = convertTo<int>(clength);
+    this->UID = (EventUID)uid;
+    this->Options = flags;
+    this->Feedback = (EventFeedback)feedback;
+    this->Length = length;
 
     // check header's sanity
     if ((this->UID < EventUID::Unassigned || this->UID > EventUID::SanityCheck)
@@ -164,25 +166,33 @@ namespace Net {
 
     // parse properties
     if (this->Length > 0) {
+      if ((this->Options & Event::Compressed) == Event::Compressed) {
+        is >> this->Rawsize;
+        is.get();
+
+        std::cout << "a compressed event, raw size: " << this->Rawsize << "\n";
+      }
+
       int checksum;
       is >> checksum;
+      is.get();
 
-      char* props = new char[this->Length+1];
-      is.rdbuf()->sgetn(props, this->Length);
-      props[this->Length] = '\0';
+      std::string props;
+      for (int i=0; i < this->Length; ++i)
+        props.push_back(is.get());
 
       // verify CRC checksum
-      this->Checksum = Event::_CRC32(std::string(props));
+      this->Checksum = Event::_CRC32(props);
       if (this->Checksum != checksum) {
-        std::cerr << "CRC mismatch, aborting: " << this->Checksum << " vs " << checksum << " for " << props << "\n";
-        delete props;
+        std::cerr << "CRC mismatch, aborting: " << this->Checksum << " vs " << checksum << " for " << props << " => " << props.size() << "\n";
+        //delete props;
         return false;
       }
 
       if ((this->Options & Event::NoFormat) == Event::NoFormat) {
-        this->setProperty("Data", props);
+        this->setProperty("Data", std::string(props));
 
-        std::cout << "oh loook its an unformatted msg: " << props << "\n";
+        //std::cout << "oh loook its an unformatted msg: " << std::string(props) << "\n";
       } else {
         std::vector<std::string> elems = split(props, ',');
         assert(elems.size() > 0 && elems.size() % 2 == 0);
@@ -191,7 +201,7 @@ namespace Net {
           this->setProperty(elems[i], elems[i+1]);
       }
 
-      delete props;
+      //delete props;
     }
 
     // skip the footer
@@ -214,7 +224,7 @@ namespace Net {
       // if the event is raw, we've to dump only one property
       if ((this->Options & Event::NoFormat) == Event::NoFormat) {
         // must have this, otherwise discard
-        //assert(this->hasProperty("Data"));
+        assert(this->hasProperty("Data"));
         if (this->hasProperty("Data"))
           props = this->getProperty("Data");
       } else {
@@ -229,19 +239,26 @@ namespace Net {
     stream << (unsigned char)this->UID;
     stream << (unsigned char)this->Options;
     stream << (unsigned char)this->Feedback;
-    stream.rdbuf()->sputn(stringify((uint16_t)props.size()).c_str(), 2);
-    //stream << (uint16_t)props.size();
+    //stream.rdbuf()->sputn(stringify((uint16_t)props.size()).c_str(), 2);
+    stream << (uint16_t)props.size() << " ";
     if (!props.empty()) {
-      stream << Event::_CRC32(props);
+      if ((this->Options & Event::Compressed) == Event::Compressed) {
+        stream << (uint32_t)this->Rawsize << " ";
+        std::cout << "dumping raw size of compressed event: " << this->Rawsize << "\n";
+      }
+
+      stream << Event::_CRC32(props) << " ";
       stream << props;
     }
 
-    std::cout << "Event properties: "
-      << props << " (size: " << (uint16_t)props.size()
-      << "->" << stringify((uint16_t)props.size()) << ")\n";
+    //std::cout << "outbound -> " << props << "\n";
+
+    //~ std::cout << "Event properties: "
+      //~ << props << " (size: " << (uint16_t)props.size()
+      //~ << "->" << stringify((uint16_t)props.size()) << ")\n";
 
     stream << Event::Footer;
-    std::cout << "post-dump: " << out.size() << "bytes \n";
+    //std::cout << "post-dump: " << out.size() << "bytes \n";
   }
 
 }

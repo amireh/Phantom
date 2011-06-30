@@ -102,6 +102,7 @@ namespace Net {
     //message outbound, inbound;
     Event outbound, inbound;
 
+    bool closed_;
   };
 
   typedef boost::shared_ptr<base_connection> base_connection_ptr;

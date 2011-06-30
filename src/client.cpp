@@ -22,6 +22,8 @@
  */
 
 #include "client.hpp"
+#include "ResourceManager.h"
+#include "Archiver.h"
 
 using boost::asio::ip::tcp;
 namespace Pixy {
@@ -40,18 +42,18 @@ namespace Net {
       throw e;
     }
 
-    conn_->get_message_handler().bind(EventUID::Login, this, &client::on_login);
+    conn_->get_message_handler().bind(EventUID::SyncGameData, this, &client::on_login);
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
-    Event foo(EventUID::Login);
+    Event foo(EventUID::SyncGameData);
     //foo.Options &= 0;
     //foo.Options |= Event::NoFormat;
     //foo.setProperty("Data", "ThisIsAVeryLongPuppetName;asd,lzxoc$!\r\n\r\nFOO");
     //foo.dump();
     //return;
-    foo.setProperty("Username", "Kandie");
-    foo.setProperty("Password", "tuonela");
+    /*foo.setProperty("Username", "Kandie");
+    foo.setProperty("Password", "tuonela");*/
 
     //timer_.expires_from_now(boost::posix_time::seconds(2));
     //timer_.async_wait( boost::bind( &connection::send, conn_, foo ));
@@ -69,7 +71,24 @@ namespace Net {
   }
 
   void client::on_login(const Event& evt) {
-    std::cout << (evt.Feedback == EventFeedback::Ok ? "logged in!" : "couldn't log in") << "\n";
+    //std::cout << (evt.Feedback == EventFeedback::Ok ? "logged in!" : "couldn't log in") << "\n";
+    //std::cout << evt.getProperty("Data");
+    ResourceManager foo;
+
+    std::string senc = evt.getProperty("Data");
+
+    vector<unsigned char> encoded(senc.begin(), senc.end());
+    vector<unsigned char> raw;
+
+    if (Archiver::decodeLzma(raw, encoded, evt.Rawsize) != 1) {
+      std::cerr << "decoding failed!! \n";
+    }
+
+    string raw2str(raw.begin(), raw.end());
+
+    std::istringstream datastream(raw2str);
+
+    foo.populate(datastream);
   }
 }
 }

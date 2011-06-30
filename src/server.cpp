@@ -37,11 +37,9 @@ server::server()
     ping_timer_(io_service_),
     strand_(io_service_),
     ping_interval(5),
-    dbmgr_(new db_manager(io_service_))
+    dbmgr_(0),
+    resmgr_(0)
 {
-  resolve_paths();
-  init_logger();
-
   // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
   boost::asio::ip::tcp::resolver resolver(io_service_);
   boost::asio::ip::tcp::resolver::query query("127.0.0.1", "60100");
@@ -73,15 +71,23 @@ void server::run()
   std::cout
     << "Messages header length: " << Event::HeaderLength << ", footer length: " << Event::FooterLength << "\n";
 
+  resolve_paths();
+  init_logger();
+
+  dbmgr_ = new db_manager(io_service_);
+  dbmgr_->connect();
+
+  resmgr_ = new sresource_manager();
+  resmgr_->dump();
+
   // start our player ping timer
   refresh_timer();
 
-  dbmgr_->connect();
-  //delete dbmgr;
-
   // Wait for all threads in the pool to exit.
   workers.join_all();
+
   delete dbmgr_;
+  delete resmgr_;
 
   if (log_) {
     delete log_appender_;
@@ -257,5 +263,10 @@ void server::refresh_timer() {
 db_manager& server::get_dbmgr() {
   return *dbmgr_;
 }
+
+sresource_manager& server::get_resmgr() {
+  return *resmgr_;
+}
+
 } // namespace Net
 } // namespace Pixy

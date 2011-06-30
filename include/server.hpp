@@ -47,7 +47,7 @@
 #include "event.hpp"
 #include "server_connection.hpp"
 #include "db_manager.hpp"
-
+#include "sresource_manager.hpp"
 
 // LOGGER
 #include "log4cpp/Category.hh"
@@ -75,6 +75,7 @@ namespace Net {
     void stop();
 
     db_manager& get_dbmgr();
+    sresource_manager& get_resmgr();
 
     std::string const& get_root_path();
     std::string const& get_bin_path();
@@ -141,6 +142,7 @@ namespace Net {
     const int ping_interval;
 
     db_manager* dbmgr_;
+    sresource_manager *resmgr_;
 
     static server* __instance;
 

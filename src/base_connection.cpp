@@ -32,7 +32,8 @@ base_connection::base_connection(boost::asio::io_service& io_service)
     socket_(io_service),
     message_handler_(io_service),
     request_(Event::MaxLength),
-    response_(Event::MaxLength)
+    response_(Event::MaxLength),
+    closed_(false)
 {
 }
 
@@ -52,6 +53,8 @@ void base_connection::start() {
 }
 
 void base_connection::stop() {
+  if (closed_)
+    return;
 
   boost::system::error_code ignored_ec;
 
@@ -60,6 +63,7 @@ void base_connection::stop() {
   socket_.close(ignored_ec);
 
   std::cout << "Connection: closed\n";
+  closed_ = true;
 }
 
 void base_connection::read() {

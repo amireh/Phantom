@@ -48,15 +48,16 @@ class connection : public base_connection
 
   protected:
 
-  void on_pong(const Event& msg);
-  void on_login(const Event& msg);
+  void on_pong(const Event& evt);
+  void on_login(const Event& evt);
   void on_login_feedback(db_result rc, std::string username);
+  void on_sync_game_data(const Event& evt);
   void on_disconnect(const Event& msg);
 
   Event pingevt_;
   int ping_timeouts_;
 
-  void promote();
+  void promote(std::string& username);
 
   Player* player_;
 };

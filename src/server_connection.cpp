@@ -13,6 +13,7 @@ namespace Net {
   {
     message_handler_.bind(EventUID::Pong, this, &connection::on_pong);
     message_handler_.bind(EventUID::Login, this, &connection::on_login);
+    message_handler_.bind(EventUID::SyncGameData, this, &connection::on_sync_game_data);
   }
 
   connection::~connection() {
@@ -30,6 +31,10 @@ namespace Net {
 
   void connection::ping() {
     send(pingevt_);
+    ++ping_timeouts_;
+    if (ping_timeouts_ >= 3)
+      strand_.post( boost::bind(&connection::stop, shared_from_this()));
+
     /*try {
       std::cout << "pinging client... ";
       size_t n = socket_.send(pinger_.data());
@@ -50,33 +55,21 @@ namespace Net {
   void connection::on_login(const Event &evt) {
     std::cout << "guest wants to login\n";
 
-    db_manager& dbmgr = server::singleton().get_dbmgr();
+    if (!evt.hasProperty("Username") || !evt.hasProperty("Password"))
+      return;
 
+    db_manager& dbmgr = server::singleton().get_dbmgr();
     bool success = true;
     std::string inUsername, inPassword;
-    if (evt.hasProperty("Username") && evt.hasProperty("Password")) {
-      inUsername = evt.getProperty("Username");
-      // TODO: use magic/salt to generate passwords (eg concatenate pw + salt and md5sum it)
-      std::string _md5pw = MD5((unsigned char*)evt.getProperty("Password").c_str()).hex_digest();
-      std::cout
-        << "authenticating user " << inUsername
-        << " with password " << inPassword << " hashed " << _md5pw << "\n";
-      dbmgr.login(inUsername, _md5pw, boost::bind(&connection::on_login_feedback, this, _1, _2) );
 
+    inUsername = evt.getProperty("Username");
+    // TODO: use magic/salt to generate passwords (eg concatenate pw + salt and md5sum it)
+    std::string _md5pw = MD5((unsigned char*)evt.getProperty("Password").c_str()).hex_digest();
+    std::cout
+      << "authenticating user " << inUsername
+      << " with password " << inPassword << " hashed " << _md5pw << "\n";
 
-    /*if (success) {
-      std::cout << "login successful, promoting guest to player " << lEvt->getProperty("Username");
-      lEvt->setFeedback(EVT_OK);
-      // promote her to Player
-      mServer->promoteToPlayer(inPkt->guid, inUsername, mDBMgr.getUserId(lEvt->getProperty("Username").c_str()));
-    } else {
-      //std::cout << "invalid login credentials for user " << lEvt->getProperty("Username");
-      lEvt->setFeedback(EVT_ERROR);*/
-    }
-/*
-    mServer->sendToGuest(lEvt, inPkt->guid);
-
-    lEvt->removeHandler();*/
+    dbmgr.login(inUsername, _md5pw, boost::bind(&connection::on_login_feedback, this, _1, _2) );
   }
 
   void connection::on_login_feedback(db_result rc, std::string username) {
@@ -87,25 +80,34 @@ namespace Net {
     } else {
       std::cout << "client " << username << " logged in successfully\n";
       evt.Feedback = EventFeedback::Ok;
-      promote();
+      promote(username);
     }
 
     send(evt);
   }
 
-  void connection::promote() {
+  void connection::promote(std::string& username) {
     assert(!player_);
 
-    /*player_ = new Player();
-    player_->setUserId(inUserId);
-    player_->setGUID(inGuest);
-    player_->setUsername(inUsername);
-    player_->setIsOnline(true);*/
+    player_ = new Player();
+    //player_->setUserId(inUserId);
+    //player_->setGUID(inGuest);
+    player_->setUsername(username);
+    player_->setIsOnline(true);
   }
 
   void connection::on_disconnect(const Event &evt) {
     std::cout << "client disconnecting\n";
     stop();
+  }
+
+  void connection::on_sync_game_data(const Event &evt) {
+    Event resp(EventUID::SyncGameData);
+    resp.Options = Event::NoFormat | Event::Compressed;
+    resp.setProperty("Data", server::singleton().get_resmgr().get_game_data());
+    resp.Feedback = EventFeedback::Ok;
+    resp.Rawsize = server::singleton().get_resmgr().get_raw_game_data_size();
+    send(resp);
   }
 
 } // namespace Net

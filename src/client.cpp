@@ -40,6 +40,8 @@ namespace Net {
       throw e;
     }
 
+    conn_->get_message_handler().bind(EventUID::Login, this, &client::on_login);
+
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
     Event foo(EventUID::Login);
@@ -48,21 +50,12 @@ namespace Net {
     //foo.setProperty("Data", "ThisIsAVeryLongPuppetName;asd,lzxoc$!\r\n\r\nFOO");
     //foo.dump();
     //return;
-    foo.setProperty("Spell", "ThisIsAVeryLongSpellName");
-    foo.setProperty("Unit1", "ThisIsAVeryLongUnitName");
-    foo.setProperty("Unit2", "ThisIsAVeryLongUnitName");
-    foo.setProperty("Unit3", "ThisIsAVeryLongUnitName");
+    foo.setProperty("Username", "Kandie");
+    foo.setProperty("Password", "tuonela");
 
-    timer_.expires_from_now(boost::posix_time::seconds(2));
-    timer_.async_wait( boost::bind( &connection::send, conn_, foo ));
-    //conn_->send(foo);
-
-    //message foo(message_id::foo);
-    //foo.body = "HAI";
-    for (int i=0; i < 3; ++i) {
-      //conn_->send(Event("Pong"));
-
-    }
+    //timer_.expires_from_now(boost::posix_time::seconds(2));
+    //timer_.async_wait( boost::bind( &connection::send, conn_, foo ));
+    conn_->send(foo);
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
@@ -75,7 +68,8 @@ namespace Net {
     conn_.reset();
   }
 
-
-
+  void client::on_login(const Event& evt) {
+    std::cout << (evt.Feedback == EventFeedback::Ok ? "logged in!" : "couldn't log in") << "\n";
+  }
 }
 }

@@ -24,6 +24,8 @@
 #define H_PixyNet_Connection_H
 
 #include "base_connection.hpp"
+#include "db_manager.hpp"
+#include "md5/md5.hh"
 
 namespace Pixy {
 namespace Net {
@@ -42,20 +44,21 @@ class connection : public base_connection
   }
 
   virtual void stop();
-
   void ping();
 
   protected:
 
-  //void on_pong(const message& msg);
   void on_pong(const Event& msg);
-  void on_foo(const Event& msg);
-  //void on_disconnect(const message& msg);
+  void on_login(const Event& msg);
+  void on_login_feedback(db_result rc, std::string username);
+  void on_disconnect(const Event& msg);
 
-  //boost::asio::streambuf pinger_;
-  //message pingmsg_;
   Event pingevt_;
   int ping_timeouts_;
+
+  void promote();
+
+  Player* player_;
 };
 
 typedef boost::shared_ptr<connection> connection_ptr;

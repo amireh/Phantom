@@ -24,9 +24,14 @@
 #ifndef H_PixyNet_Server_H
 #define H_PixyNet_Server_H
 
+#define ESERVER_DATA_DIR "dumps/data"
+#define ESERVER_LOG_DIR "log"
+
 #include <string>
 #include <vector>
 #include <list>
+
+// BOOST
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
@@ -34,9 +39,21 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread.hpp>
-//#include "message.hpp"
+#include <boost/filesystem.hpp>
+
+// PIXY
+#include "binreloc/binreloc.h"
+#include "PixyShared.h"
 #include "event.hpp"
 #include "server_connection.hpp"
+#include "db_manager.hpp"
+
+
+// LOGGER
+#include "log4cpp/Category.hh"
+#include "log4cpp/FixedContextCategory.hh"
+#include "log4cpp/FileAppender.hh"
+#include "log4cpp/PixyLogLayout.h"
 
 namespace Pixy {
 namespace Net {
@@ -57,6 +74,12 @@ namespace Net {
     /// Stop the server.
     void stop();
 
+    db_manager& get_dbmgr();
+
+    std::string const& get_root_path();
+    std::string const& get_bin_path();
+    std::string const& get_data_path();
+
   protected:
     // connection can mark itself as dead by calling close()
     friend class connection;
@@ -66,6 +89,9 @@ namespace Net {
     void _close(connection_ptr);
 
   private:
+
+    void resolve_paths();
+    void init_logger();
 
     void do_stop();
 
@@ -91,28 +117,33 @@ namespace Net {
 
     /// The number of threads that will call io_service::run().
     const std::size_t thread_pool_size_;
+    boost::thread_group workers;
 
-    /// The io_service used to perform asynchronous operations.
     boost::asio::io_service io_service_;
-
-    /// Acceptor used to listen for incoming connections.
     boost::asio::ip::tcp::acceptor acceptor_;
-
     boost::asio::strand strand_;
 
     /// The next connection to be accepted.
     connection_ptr new_connection_;
-
     std::list<connection_ptr> connections;
     std::vector<connection_ptr> dead_connections;
     //std::list<gconnection_ptr> guests;
 
+    std::string root_path_, bin_path_, data_path_, log_path_;
+
+    // log4cpp stuff
+    log4cpp::Appender* log_appender_;
+    log4cpp::Layout* log_layout_;
+    log4cpp::Category* log_category_;
+    log4cpp::Category	*log_;
+
     boost::asio::deadline_timer ping_timer_;
     const int ping_interval;
 
+    db_manager* dbmgr_;
+
     static server* __instance;
 
-    boost::thread_group workers;
   };
 
 

@@ -47,6 +47,8 @@ namespace Net {
 
       boost::asio::io_service &io_service_;
       boost::asio::deadline_timer timer_;
+
+      void on_login(const Event& evt);
   };
 
 }

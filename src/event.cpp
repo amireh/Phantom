@@ -1,4 +1,5 @@
 #include "event.hpp"
+#include "PixyUtility.h"
 
 namespace Pixy {
 namespace Net {
@@ -118,29 +119,37 @@ namespace Net {
 
     int bytes_received = in.size();
     if (bytes_received < Event::HeaderLength + Event::FooterLength) {
-      std::cerr << "message is too short!!\n";
+      std::cerr
+        << "message is too short (" << bytes_received
+        << " out of " << Event::HeaderLength + Event::FooterLength << "!!\n";
       return false;
     }
 
-    std::cout << "received " << bytes_received << "bytes of data\n";
+    //std::cout << "received " << bytes_received << "bytes of data\n";
 
     char sp1;
     unsigned char uid, feedback, flags;
     uint16_t length;
+    char clength[2] = {0};
+    char header[3] = {0};
 
     std::istream is(&in);
     is.unsetf(std::ios_base::skipws);
-    is >> uid >> flags >> feedback >> length;
+    //is >> uid >> flags >> feedback;// >> length;
+    is.rdbuf()->sgetn(header,3);
+    is.rdbuf()->sgetn(clength, 2);
+    clength[2] = '\0';
+    //is.get();
 
-    this->UID = (EventUID)uid;
-    this->Options = flags;
-    this->Feedback = (EventFeedback)feedback;
-    this->Length = length;
+    this->UID = (EventUID)header[0];
+    this->Options = (unsigned char)header[1];
+    this->Feedback = (EventFeedback)header[2];
+    this->Length = convertTo<int>(clength);
 
     // check header's sanity
     if ((this->UID < EventUID::Unassigned || this->UID > EventUID::SanityCheck)
         || (this->Length > Event::MaxLength)
-        || (this->Feedback < EventFeedback::Unassigned || this->Feedback > EventFeedback::InvalidRequest)) {
+        || (this->Feedback < EventFeedback::Unassigned || this->Feedback > EventFeedback::SanityCheck)) {
       std::cerr << "request failed header sanity check\n";
       return false;
     }
@@ -190,7 +199,7 @@ namespace Net {
     assert(in.size() == Event::FooterLength);
     in.consume(Event::FooterLength);
 
-    this->dump();
+    //this->dump();
 
     return true;
   }
@@ -218,17 +227,21 @@ namespace Net {
     }
 
     stream << (unsigned char)this->UID;
-    stream << this->Options;
+    stream << (unsigned char)this->Options;
     stream << (unsigned char)this->Feedback;
-    stream << (uint16_t)props.size();
+    stream.rdbuf()->sputn(stringify((uint16_t)props.size()).c_str(), 2);
+    //stream << (uint16_t)props.size();
     if (!props.empty()) {
       stream << Event::_CRC32(props);
       stream << props;
     }
 
-    stream << Event::Footer;
+    std::cout << "Event properties: "
+      << props << " (size: " << (uint16_t)props.size()
+      << "->" << stringify((uint16_t)props.size()) << ")\n";
 
-    //std::cout << "post-dump: " << out.size() << "\n";
+    stream << Event::Footer;
+    std::cout << "post-dump: " << out.size() << "bytes \n";
   }
 
 }

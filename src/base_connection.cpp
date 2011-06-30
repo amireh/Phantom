@@ -128,7 +128,7 @@ void base_connection::handle_read_all(
 
 void base_connection::handle_read( const boost::system::error_code& e) { // s11n
   if (!e) {
-    std::cout << "got a message with data: " << (int)inbound.UID << "\n";
+    //std::cout << "got a message with data: " << (int)inbound.UID << "\n";
     message_handler_.deliver(inbound);
 
     inbound_data_.clear();
@@ -220,7 +220,7 @@ void base_connection::send(const Event& evt) {
 }
 void base_connection::do_send(const Event& evt) {
 
-  std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
+  //std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
 
   boost::system::error_code ec;
 
@@ -232,9 +232,9 @@ void base_connection::do_send(const Event& evt) {
             boost::asio::placeholders::error));*/
 
   if (!ec) {
-    std::cout << " sent " << n << "bytes";
+    //std::cout << " sent " << n << "bytes";
     response_.consume(n);
-    std::cout << " cleared response buf ( " << response_.size() << ")\n";
+    //std::cout << " cleared response buf ( " << response_.size() << ")\n";
   } else
     stop();
 

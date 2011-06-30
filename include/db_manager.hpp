@@ -1,5 +1,5 @@
 /*
- *  DBManager.h
+ *  db_manager.h
  *  Elementum
  *
  *  Created by Ahmad Amireh on 2/20/10.
@@ -7,8 +7,8 @@
  *
  */
 
-#ifndef H_DBManager_H
-#define H_DBManager_H
+#ifndef H_db_manager_H
+#define H_db_manager_H
 
 #include <iostream>
 #include <boost/thread.hpp>
@@ -31,13 +31,14 @@ namespace Pixy {
 namespace Net {
 
 
-  enum class DBResult : unsigned char {
+  enum class db_result : unsigned char {
     Unassigned = 0,
 
     Ok, // the operation was succesful
 
-    // to check for an error generally: (DBResult > DBResult::Ok)
+    // to check for an error generally: (db_result > db_result::Ok)
     InvalidCredentials,
+    AlreadyLoggedIn,
     InvalidName,
     InvalidOwner,
     PuppetTaken,
@@ -54,12 +55,12 @@ namespace Net {
    * multi-threaded environment, as the database connection objects themselves
    * are inherently un-safe
    */
-	class DBManager {
+	class db_manager {
 	public:
-		DBManager(boost::asio::io_service&);
-		~DBManager();
+		db_manager(boost::asio::io_service&);
+		~db_manager();
 
-    bool isConnected() const;
+    bool is_connected() const;
 
 		/*! \brief
 		 *	Validates user account credentials for connecting to the game and
@@ -74,10 +75,10 @@ namespace Net {
 		 *		true	if user record exists and password matches
 		 */
     template <typename Callback>
-		void login(const char* inUsername, const char* inPassword, Callback callback) {
+		void login(std::string inUsername, std::string inPassword, Callback callback) {
 
-      void (DBManager::*f)(const char*, const char*, boost::tuple<Callback>)
-        = &DBManager::do_login<Callback>;
+      void (db_manager::*f)(std::string,std::string, boost::tuple<Callback>)
+        = &db_manager::do_login<Callback>;
 
       strand_.post( boost::bind(f, this, inUsername, inPassword, boost::make_tuple(callback)) );
     }
@@ -87,8 +88,8 @@ namespace Net {
 		 */
     template <typename Callback>
 		void logout(const char* inUsername, Callback callback) {
-      void (DBManager::*f)(const char*, const char*, boost::tuple<Callback>)
-        = &DBManager::do_logout<Callback>;
+      void (db_manager::*f)(const char*, const char*, boost::tuple<Callback>)
+        = &db_manager::do_logout<Callback>;
 
       strand_.post( boost::bind(f, this, inUsername, boost::make_tuple(callback)) );
     }
@@ -100,12 +101,13 @@ namespace Net {
 		 */
     template <typename Callback>
 		bool load_puppet(const char* inName, Puppet& inPuppet, Callback callback) {
-      void (DBManager::*f)(const char*, Puppet&, boost::tuple<Callback>)
-        = &DBManager::do_load_puppet<Callback>;
+      void (db_manager::*f)(const char*, Puppet&, boost::tuple<Callback>)
+        = &db_manager::do_load_puppet<Callback>;
 
       strand_.post( boost::bind(f, this, inName, inPuppet, boost::make_tuple(callback)) );
     }
 
+#if 0 // __DISABLED__
 		/*! \brief
 		 *	Creates or updates if exists a user Profile.
 		 *
@@ -146,39 +148,44 @@ namespace Net {
 		void loadAllProfiles(const Player& inPlayer,
 							 std::vector<Puppet*>& inContainer);
 
+#endif // __DISABLED__
 
 	protected:
 
     /// helpers for retrieving user id's
-		int getUserId(const char* inUsername);
-		std::string getUsername(const int inUserId);
+		int get_userid(const char* inUsername);
+		std::string get_username(const int inUserId);
 
     // used by login()
     template <typename Callback>
-		void do_login(const char* inUsername, const char* inMD5Password, boost::tuple<Callback> callback) {
-      DBResult dbr = DBResult::Unassigned;
+		void do_login(std::string inUsername, std::string inMD5Password, boost::tuple<Callback> callback) {
+      db_result dbr = db_result::Unassigned;
 
-      //pqxx::result mResult;
+      //pqxx::result result_;
+      std::cout << "Username: " << inUsername << "\n";
+      std::cout << "Password: " << inMD5Password << "\n";
       std::ostringstream _condition;
-      _condition	<< "username='" << inUsername << "'"
-      << " AND password='" << inMD5Password << "'";
+      _condition << "username='" << inUsername << "'";
+      _condition << " AND password='" << inMD5Password << "'";
 
-      mResult.clear();
-      getRecords(mResult, "accounts", "COUNT(id)", _condition.str().c_str());
+      std::cout << "Condition: " << _condition.str() << "\n";
 
-      bool success = convertTo<int>(mResult[0]["count"].c_str()) == 1;
+      result_.clear();
+      bool success = false;
+      if ( get_records(result_, "accounts", "COUNT(username)", _condition.str()) )
+        success = convertTo<int>(result_[0]["count"].c_str()) == 1;
 
       if (success) {
-        std::ostringstream _condition;
-        _condition << "username='" << inUsername << "'";
-        updateRecord("accounts", "is_online", _condition.str().c_str(), "true");
-        updateRecord("accounts", "last_login_at", _condition.str().c_str(), "now()");
+        //_condition.str("");
+        //_condition << "username='" << inUsername << "'";
+        update_record("accounts", "is_online", _condition.str().c_str(), "true");
+        update_record("accounts", "last_login_at", _condition.str().c_str(), "now()");
 
-        dbr = DBResult::Ok;
-      }
+        dbr = db_result::Ok;
+      } else
+        dbr = db_result::InvalidCredentials;
 
-      dbr = DBResult::InvalidCredentials;
-      boost::get<0>(callback)(dbr);
+      boost::get<0>(callback)(dbr, inUsername);
     }
 
     template <typename Callback>
@@ -186,37 +193,37 @@ namespace Net {
 
       std::ostringstream _condition;
       _condition << "username='" << inUsername << "'";
-      updateRecord("accounts", "is_online", _condition.str().c_str(), "false");
+      update_record("accounts", "is_online", _condition.str().c_str(), "false");
 
-      boost::get<0>(callback)(DBResult::Ok);
+      boost::get<0>(callback)(db_result::Ok);
     }
 
     template <typename Callback>
     void do_load_puppet(const char* inProfileName, Puppet& inPuppet, boost::tuple<Callback> callback)
     {
 #if 0 // __DISABLED__ waiting until server & res mgr are migrated to new API
-      //pqxx::result mResult;
+      //pqxx::result result_;
       std::ostringstream _condition;
       _condition << "puppets.name=" << escape(inProfileName);
-      getRecords(mResult, "puppets", "*", _condition.str().c_str());
+      get_records(result_, "puppets", "*", _condition.str().c_str());
 
-      if (mResult.empty())
+      if (result_.empty())
         throw std::runtime_error("ERROR! Profile does not exist in database for loading!");
 
-      inPuppet.setName(mResult[0]["name"].c_str());
-      inPuppet.setRace((RACE)convertTo<int>(mResult[0]["race"].c_str()));
-      inPuppet.setLevel(convertTo<int>(mResult[0]["level"].c_str()));
-      inPuppet.setIntelligence(convertTo<int>(mResult[0]["intelligence"].c_str()));
-      inPuppet.setVitality(convertTo<int>(mResult[0]["vitality"].c_str()));
-      Server::getSingleton().getResMgr()._assignTalents(inPuppet, mResult[0]["talents"].c_str());
+      inPuppet.setName(result_[0]["name"].c_str());
+      inPuppet.setRace((RACE)convertTo<int>(result_[0]["race"].c_str()));
+      inPuppet.setLevel(convertTo<int>(result_[0]["level"].c_str()));
+      inPuppet.setIntelligence(convertTo<int>(result_[0]["intelligence"].c_str()));
+      inPuppet.setVitality(convertTo<int>(result_[0]["vitality"].c_str()));
+      Server::getSingleton().getResMgr()._assignTalents(inPuppet, result_[0]["talents"].c_str());
 
       // get the decks
-      mResult.clear();
+      result_.clear();
       _condition.str("");
       _condition << "decks.puppet=" << escape(inPuppet.getName());
-      getRecords(mResult, "decks", "name,spells,use_count", _condition.str().c_str());
+      get_records(result_, "decks", "name,spells,use_count", _condition.str().c_str());
       pqxx::result::const_iterator lDeck;
-      for (lDeck = mResult.begin(); lDeck != mResult.end(); ++lDeck) {
+      for (lDeck = result_.begin(); lDeck != result_.end(); ++lDeck) {
         Server::getSingleton().getResMgr()._assignDeck(
           inPuppet,
           (*lDeck)["name"].c_str(),
@@ -225,7 +232,7 @@ namespace Net {
       }
 #endif
 
-      boost::get<0>(callback)(DBResult::Ok);
+      boost::get<0>(callback)(db_result::Ok);
     }
 
 		/*! Retrieves a set of record(s) according to the input
@@ -251,12 +258,12 @@ namespace Net {
 		 *	@return
 		 *		pqxx::result container with a result::size() of nr of tuples retrieved.
 		 */
-		void
-		getRecords(pqxx::result& out,
-      const char* inTable,
-			const char* inFields="*",
-			const char* inCondition="",
-			const char* inOrder="");
+		bool
+		get_records(pqxx::result& out,
+      std::string inTable,
+			std::string inFields="*",
+			std::string inCondition="",
+			std::string inOrder="");
 
 		/*! Inserts a record into inTable
 		 *
@@ -264,7 +271,7 @@ namespace Net {
 		 *		true if the insertion was successful, false if not
 		 */
 		bool
-		createRecord(const char* inTable,
+		create_record(const char* inTable,
 					 const char* inFields,
 					 const char* inValues);
 
@@ -280,7 +287,7 @@ namespace Net {
 		 *		false if no records were deleted
 		 */
 		bool
-		deleteRecords(const char* inTable,
+		delete_records(const char* inTable,
 					  const char* inCondition);
 
 		/*! Modifies the value of a field for a matching record to a new value
@@ -293,7 +300,7 @@ namespace Net {
 		 *		false if no records were found matching the criteria
 		 */
 		bool
-		updateRecord(const char* inTable,
+		update_record(const char* inTable,
 					 const char* inField,
 					 const char* inCondition,
 					 const char* inNewValue);
@@ -301,19 +308,19 @@ namespace Net {
 		/*! \brief
 		 *	Shows line status of a user.
 		 */
-		bool isLogged(const char* inUsername);
+		bool is_logged(const char* inUsername);
 
-		pqxx::connection *mConn; /// our db connection handle
+		pqxx::connection *conn_; /// our db connection handle
 		//pqxx::work *mWorker; /// performs transactions
 
 		/* since 1 transaction can be performed at any
 		 * single time per instance, one result object alone
      * could be used for holding results
      */
-		pqxx::result mResult;
+		pqxx::result result_;
 
 		/// helper for firing up the transactor and  executing the sql queries
-		void execQuery(const char* inQuery, pqxx::result* outResult);
+		bool exec_query(const char* inQuery, pqxx::result* outResult);
 
 		/// helper for escaping strings for use in queries
 		std::string escape(std::string inString);
@@ -322,7 +329,7 @@ namespace Net {
 
 		void runTests();
 
-		log4cpp::FixedContextCategory *mLog;
+		log4cpp::FixedContextCategory *log_;
 
     private:
     friend class server;
@@ -358,8 +365,8 @@ namespace Net {
 		void disconnect();
 
 	private:
-		DBManager(const DBManager& src) = delete;
-		DBManager& operator=(const DBManager& rhs) = delete;
+		db_manager(const db_manager& src) = delete;
+		db_manager& operator=(const db_manager& rhs) = delete;
 	};
 }
 }

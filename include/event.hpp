@@ -123,7 +123,9 @@ namespace Net {
     Ok,
     Error,
     InvalidRequest,
-    InvalidCredentials
+    InvalidCredentials,
+
+    SanityCheck
   };
 
   /*! \class Event "Event.h" "include/Event.h"
@@ -135,8 +137,8 @@ namespace Net {
     enum {
       // if Length is small enough it will be cast to 1 byte thus we can't
       // depend on uint16_t being interpreted as 2 bytes long.. so we -1
-      HeaderLength = sizeof(unsigned char) * 3 + sizeof(uint16_t) - 1, // "UIDLengthFeedback"
-      FooterLength = strlen("\r\n\r\n"), // "\r\n\r\n"
+      HeaderLength = 5, // "UIDLengthFeedback"
+      FooterLength = 4, // "\r\n\r\n"
       MaxLength = 65536 // no single message can be longer than this (stored in uint16_t)
     };
 

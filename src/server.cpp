@@ -36,8 +36,12 @@ server::server()
     new_connection_(new connection(io_service_)),
     ping_timer_(io_service_),
     strand_(io_service_),
-    ping_interval(5)
+    ping_interval(5),
+    dbmgr_(new db_manager(io_service_))
 {
+  resolve_paths();
+  init_logger();
+
   // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
   boost::asio::ip::tcp::resolver resolver(io_service_);
   boost::asio::ip::tcp::resolver::query query("127.0.0.1", "60100");
@@ -72,13 +76,20 @@ void server::run()
   // start our player ping timer
   refresh_timer();
 
-  DBManager* dbmgr = new DBManager(io_service_);
-  dbmgr->connect();
+  dbmgr_->connect();
   //delete dbmgr;
 
   // Wait for all threads in the pool to exit.
   workers.join_all();
-  delete dbmgr;
+  delete dbmgr_;
+
+  if (log_) {
+    delete log_appender_;
+    delete log_category_;
+    delete log_layout_;
+    delete log_;
+  }
+  log4cpp::Category::shutdown();
 }
 
 void server::work() {
@@ -122,6 +133,85 @@ void server::handle_accept(const boost::system::error_code& e)
   }
 }
 
+
+void server::resolve_paths() {
+  using boost::filesystem::path;
+  using boost::filesystem::create_directory;
+  using boost::filesystem::is_directory;
+
+  // locate the binary and build its path
+  // use binreloc and boost::filesystem to build up our paths
+  int brres = br_init(0);
+  if (brres == 0) {
+    std::cerr << "binreloc could not be initialised\n";
+  }
+  char *p = br_find_exe_dir(".");
+  bin_path_ = std::string(p);
+  free(p);
+  bin_path_ = path(bin_path_).make_preferred().string();
+
+  // root is ../
+  path lRoot = path(bin_path_);
+  for (int i=0; i < 1; ++i) {
+    lRoot = lRoot.remove_leaf();
+  }
+
+  root_path_ = lRoot.make_preferred().string();
+  data_path_ = (path(root_path_) / path(ESERVER_DATA_DIR)).make_preferred().string();
+  log_path_ = (path(root_path_) / path(ESERVER_LOG_DIR)).make_preferred().string();
+
+  if (!is_directory(path(log_path_).root_directory()))
+    create_directory(path(log_path_).root_directory());
+  if (!is_directory(path(data_path_)))
+    create_directory(path(data_path_));
+
+  std::cout << "Binary path: " <<  bin_path_ << "\n";
+  std::cout << "Root path: " <<  root_path_ << "\n";
+  std::cout << "Data path: " <<  data_path_ << "\n";
+  std::cout << "Log path: " <<  log_path_ << "\n";
+
+};
+
+std::string const& server::get_root_path() {
+  return root_path_;
+};
+std::string const& server::get_data_path() {
+  return data_path_;
+};
+std::string const& server::get_bin_path() {
+  return bin_path_;
+};
+
+void server::init_logger() {
+
+  if (!boost::filesystem::exists(log_path_))
+    boost::filesystem::create_directory(log_path_);
+
+  log_appender_ =	new log4cpp::FileAppender("FileAppender", log_path_ + "/EServer.log", false);
+  log_layout_ = new PixyLogLayout();
+  log_appender_->setLayout(log_layout_);
+  log_category_ = &log4cpp::Category::getInstance(PIXY_LOG_CATEGORY);
+
+  log_category_->setAdditivity(false);
+  log_category_->setAppender(log_appender_);
+  log_category_->setPriority(log4cpp::Priority::DEBUG);
+
+  log_ = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "Server");
+
+  static_cast<PixyLogLayout*>(log_layout_)->setVanilla(true);
+  log_->infoStream() << "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+";
+  log_->infoStream() << "\n+                        Elementum v" << ELEMENTUM_VERSION << " - Server Log                          +";
+  log_->infoStream() << "\n+                      (http://www.elementum-game.com)                        +";
+  log_->infoStream() << "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n";
+  static_cast<PixyLogLayout*>(log_layout_)->setVanilla(false);
+
+  log_appender_->setLayout(log_layout_);
+
+  log_category_ = 0;
+  log_layout_ = 0;
+  log_appender_ = 0;
+}
+
 void server::cleanup() {
   std::cout << "Server: cleaning up " << dead_connections.size() << " dead connections: ";
   for (connection_ptr conn : dead_connections) {
@@ -162,6 +252,10 @@ void server::ping_clients(const boost::system::error_code& error) {
 void server::refresh_timer() {
   ping_timer_.expires_from_now(boost::posix_time::seconds(ping_interval));
   ping_timer_.async_wait( strand_.wrap(boost::bind(&server::ping_clients, this, boost::asio::placeholders::error)));
+}
+
+db_manager& server::get_dbmgr() {
+  return *dbmgr_;
 }
 } // namespace Net
 } // namespace Pixy

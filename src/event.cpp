@@ -17,7 +17,8 @@ namespace Net {
     Feedback(inFeedback),
     Length(0),
     Checksum(0),
-    Rawsize(0)
+    Rawsize(0),
+    Sender()
   {
 		Properties.clear();
 	}
@@ -35,7 +36,9 @@ namespace Net {
     Length = 0;
     Checksum = 0;
     Rawsize = 0;
-    Properties.clear();
+    Sender.reset();
+    if (!Properties.empty())
+      Properties.clear();
 	}
 
 	Event::Event(const Event& src) {
@@ -58,6 +61,7 @@ namespace Net {
     this->Length = src.Length;
     this->Rawsize = src.Rawsize;
     this->Checksum = src.Checksum;
+    this->Sender = src.Sender;
 
     if (!src.Properties.empty())
       for (auto property : src.Properties)
@@ -223,7 +227,7 @@ namespace Net {
 
     // skip the footer
     global_stream_lock.lock();
-    std::cout << in.size() << " bytes left\n";
+    //std::cout << in.size() << " bytes left\n";
     global_stream_lock.unlock();
     //assert(in.size() == Event::FooterLength);
     in.consume(Event::FooterLength);
@@ -264,7 +268,7 @@ namespace Net {
       if ((this->Options & Event::Compressed) == Event::Compressed) {
         stream << (uint32_t)this->Rawsize << " ";
         global_stream_lock.lock();
-        std::cout << "dumping raw size of compressed event: " << this->Rawsize << "\n";
+        //std::cout << "dumping raw size of compressed event: " << this->Rawsize << "\n";
         global_stream_lock.unlock();
       }
 
@@ -280,7 +284,7 @@ namespace Net {
 
     stream << Event::Footer;
     global_stream_lock.lock();
-    std::cout << "post-dump: " << out.size() << "bytes \n";
+    //std::cout << "post-dump: " << out.size() << "bytes \n";
     global_stream_lock.unlock();
   }
 

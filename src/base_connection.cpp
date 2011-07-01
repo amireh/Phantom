@@ -30,7 +30,7 @@ namespace Net {
 base_connection::base_connection(boost::asio::io_service& io_service)
   : strand_(io_service),
     socket_(io_service),
-    message_handler_(io_service),
+    dispatcher_(io_service),
     request_(Event::MaxLength),
     response_(Event::MaxLength),
     closed_(false)
@@ -44,13 +44,17 @@ base_connection::~base_connection() {
 boost::asio::ip::tcp::socket& base_connection::socket() {
   return socket_;
 }
-message_handler& base_connection::get_message_handler() {
-  return message_handler_;
+dispatcher& base_connection::get_dispatcher() {
+  return dispatcher_;
 }
 
 void base_connection::start() {
-  boost::asio::ip::tcp::no_delay option(true);
-  socket_.set_option(option);
+
+  socket_.set_option(boost::asio::ip::tcp::no_delay(true));
+  //socket_.set_option( boost::asio::socket_base::send_buffer_size( 8096 ) );
+  //socket_.set_option( boost::asio::socket_base::receive_buffer_size( 8096 ) );
+  //boost::asio::socket_base::non_blocking_io command(true);
+  //socket_.io_control(command);
   read();
 }
 
@@ -62,7 +66,7 @@ void base_connection::stop() {
 
   // initiate graceful base_connection closure & stop all asynchronous ops
   socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ignored_ec);
-  socket_.close(ignored_ec);
+  //socket_.close(ignored_ec);
 
   std::cout << "Connection: closed\n";
   closed_ = true;
@@ -100,8 +104,8 @@ void base_connection::handle_read(
       bool result = inbound.fromStream(request_);
       if (result) {
         request_.consume(bytes_transferred);
-        // message is ready for dispatching
-        message_handler_.deliver(inbound);
+
+        handle_inbound();
 
         // read next message
         read();
@@ -118,7 +122,7 @@ void base_connection::handle_read(
 
 void base_connection::send(const Event& evt) {
   strand_.post( [&, evt]() {
-    std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
+    //std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
 
     boost::system::error_code ec;
 
@@ -128,19 +132,24 @@ void base_connection::send(const Event& evt) {
     outbound.toStream(response_);
 
     size_t n = boost::asio::write(socket_, response_.data(), boost::asio::transfer_all(), ec);
-    std::cout << "sent data, buffer now has " << response_.size() << "\n";
+    //std::cout << "sent " << n << "bytes of data, buffer now has " << response_.size() << "\n";
     /*this->async_write(outbound,
             boost::bind(&base_connection::handle_write, shared_from_this(),
               boost::asio::placeholders::error));*/
 
     if (!ec) {
-      //std::cout << " sent " << n << "bytes";
+      std::cout << " sent " << n << "bytes (out of" << response_.size() << "b)\n";
       response_.consume(n);
       //std::cout << " cleared response buf ( " << response_.size() << ")\n";
     } else
       stop();
 
   });
+}
+
+void base_connection::handle_inbound() {
+  // message is ready for dispatching
+  dispatcher_.deliver(inbound);
 }
 
 } // namespace Net

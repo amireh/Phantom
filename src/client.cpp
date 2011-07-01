@@ -42,9 +42,13 @@ namespace Net {
       throw e;
     }
 
-    conn_->get_message_handler().bind(EventUID::Login, this, &client::on_login);
-    conn_->get_message_handler().bind(EventUID::JoinQueue, this, &client::on_join_queue);
-    conn_->get_message_handler().bind(EventUID::SyncGameData, this, &client::on_sync_game_data);
+    conn_->get_dispatcher().bind(EventUID::Login, this, &client::on_login);
+    conn_->get_dispatcher().bind(EventUID::SyncGameData, this, &client::on_sync_game_data);
+    conn_->get_dispatcher().bind(EventUID::JoinQueue, this, &client::on_join_queue);
+    //conn_->get_dispatcher().bind(EventUID::MatchFound, this, &client::on_match_found);
+    conn_->get_dispatcher().bind(EventUID::SyncPuppetData, this, &client::on_sync_puppet_data);
+    conn_->get_dispatcher().bind(EventUID::StartTurn, this, &client::on_start_turn);
+
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
@@ -125,5 +129,21 @@ namespace Net {
     else
       std::cout << "I couldn't join the queue :(\n";
   }
+
+  void client::on_sync_puppet_data(const Event& evt) {
+    Event foo(EventUID::Ready);
+    conn_->send(foo);
+  }
+
+
+  void client::on_start_turn(const Event& evt) {
+    conn_->send(evt);
+    timer_.expires_from_now(boost::posix_time::seconds(1));
+    timer_.async_wait( [&](boost::system::error_code e) -> void {
+      Event foo(EventUID::EndTurn);
+      conn_->send(foo);
+    });
+  }
+
 }
 }

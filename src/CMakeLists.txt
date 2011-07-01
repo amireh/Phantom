@@ -4,7 +4,7 @@ SET(Project_SRCS
   server_connection.cpp
   server.cpp
   #message_parser.cpp
-  message_handler.cpp
+  dispatcher.cpp
   server_main.cpp
   event.cpp
   db_manager.cpp
@@ -39,7 +39,7 @@ SET(Project_SRCS
   client_connection.cpp
   event.cpp
   #message_parser.cpp
-  message_handler.cpp
+  dispatcher.cpp
   client_main.cpp
 )
 # the executable

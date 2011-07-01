@@ -129,6 +129,8 @@ namespace Net {
     SanityCheck
   };
 
+  class Player;
+  typedef boost::shared_ptr<const Player> player_cptr;
   /*! \class Event "Event.h" "include/Event.h"
    *  \brief
    *  Base Event object that is used and handled to represent game events.
@@ -182,6 +184,7 @@ namespace Net {
     property_t		      Properties;
     uint32_t            Rawsize;
     static const char   *Footer;
+    player_cptr         Sender;
 
     static int _CRC32(const std::string& my_string);
     static std::string _uid_to_string(EventUID);

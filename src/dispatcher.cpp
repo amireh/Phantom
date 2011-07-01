@@ -21,27 +21,27 @@
  *
  */
 
-#include "message_handler.hpp"
+#include "dispatcher.hpp"
 
 namespace Pixy {
 namespace Net {
 
-message_handler::message_handler(boost::asio::io_service& io_service)
+dispatcher::dispatcher(boost::asio::io_service& io_service)
 : strand_(io_service) {
 }
 
-message_handler::~message_handler() {
+dispatcher::~dispatcher() {
   events.clear();
 }
 
-void message_handler::deliver(const Event& evt) {
+void dispatcher::deliver(const Event& evt) {
   events.push_back(Event(evt));
 
-  strand_.post( boost::bind( &message_handler::dispatch, this ) );
+  strand_.post( boost::bind( &dispatcher::dispatch, this ) );
 
 }
 
-void message_handler::dispatch() {
+void dispatcher::dispatch() {
   const Event& evt = events.front();
 
   evt_handlers_t::const_iterator handlers = evt_handlers_.find(evt.UID);

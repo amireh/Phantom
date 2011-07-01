@@ -34,7 +34,7 @@ namespace Net {
       connected_(false)
   {
     //message_handler_.bind(message_id::ping, this, &connection::on_ping);
-    message_handler_.bind(EventUID::Ping, this, &connection::on_ping);
+    dispatcher_.bind(EventUID::Ping, this, &connection::on_ping);
   }
 
   connection::~connection() {
@@ -63,7 +63,6 @@ namespace Net {
 
     // set KEEPALIVE to true
     socket_.set_option(boost::asio::socket_base::keep_alive(true));
-    socket_.set_option(boost::asio::ip::tcp::no_delay(true));
     std::cout << "connected!\n";
 
     return connected_;

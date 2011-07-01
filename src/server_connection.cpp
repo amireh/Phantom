@@ -11,11 +11,11 @@ namespace Net {
       ping_timeouts_(0),
       player_()
   {
-    message_handler_.bind(EventUID::Pong, this, &connection::on_pong);
-    message_handler_.bind(EventUID::Login, this, &connection::on_login);
-    message_handler_.bind(EventUID::Logout, this, &connection::on_logout);
-    message_handler_.bind(EventUID::SyncGameData, this, &connection::on_sync_game_data);
-    message_handler_.bind(EventUID::JoinQueue, this, &connection::on_join_queue);
+    dispatcher_.bind(EventUID::Pong, this, &connection::on_pong);
+    dispatcher_.bind(EventUID::Login, this, &connection::on_login);
+    dispatcher_.bind(EventUID::Logout, this, &connection::on_logout);
+    dispatcher_.bind(EventUID::SyncGameData, this, &connection::on_sync_game_data);
+    dispatcher_.bind(EventUID::JoinQueue, this, &connection::on_join_queue);
   }
 
   connection::~connection() {
@@ -25,8 +25,9 @@ namespace Net {
       // remove from instance
 
       // stop referencing it
-      player_.reset();
+
     }
+    player_.reset();
 
     std::cout << "Connection: destroyed\n";
   }
@@ -50,6 +51,17 @@ namespace Net {
       // log out from DB
       server::singleton().get_dbmgr().logout((std::string)player_->get_username());
     }
+  }
+
+  void connection::handle_inbound() {
+    if (player_ && player_->get_instance()) {
+      Event clone(inbound);
+      std::cout << "got an event from " << player_->get_username() << "\n";
+      clone.Sender = player_;
+      player_->get_instance()->enqueue(clone, player_);
+    }
+
+    base_connection::handle_inbound();
   }
 
   void connection::ping() {
@@ -140,7 +152,7 @@ namespace Net {
     std::string puppet_name = evt.getProperty("Puppet");
 
 		// load the puppet
-		Puppet* puppet = new Puppet();
+		puppet_ptr puppet( new Puppet());
     puppet->setName(puppet_name);
 
     db_manager& dbmgr = server::singleton().get_dbmgr();

@@ -37,13 +37,13 @@
 using boost::asio::ip::tcp;
 namespace Pixy {
 namespace Net {
-  class message_handler {
+  class dispatcher {
     public:
       //typedef boost::function<void(const message&)> msg_handler_t;
       typedef boost::function<void(const Event&)> evt_handler_t;
 
-      message_handler(boost::asio::io_service&);
-      ~message_handler();
+      dispatcher(boost::asio::io_service&);
+      ~dispatcher();
 
       template <typename T>
       void bind(EventUID evt, T* inT, void (T::*handler)(const Event&)) {

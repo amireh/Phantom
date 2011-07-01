@@ -48,6 +48,8 @@ class connection : public base_connection
 
   protected:
 
+  virtual void handle_inbound();
+
   void on_pong(const Event& evt);
   void on_login(const Event& evt);
   void on_login_feedback(db_result rc, std::string username);

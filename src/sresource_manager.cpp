@@ -132,7 +132,8 @@ namespace Net {
       is.read (buffer,length);
       is.close();
       sraw = string(buffer, length);
-      delete buffer;
+      delete[] buffer;
+      buffer = 0;
     }
 
     vector<unsigned char> vraw(sraw.begin(), sraw.end());
@@ -181,8 +182,8 @@ namespace Net {
     //buf[fileSize] = '\0';
     */
 
-    const char *sum = MD5((unsigned char*)senc.c_str()).hex_digest();
-    std::cout << "size of sum : " << strlen(sum) << "\n";
+    std::string sum = MD5((unsigned char*)senc.c_str()).hex_digest();
+    std::cout << "size of sum : " << sum.size() << "\n";
     std::cout << "size of raw data: " << rawSize << "\n";
     std::cout << "size of compressed data: " << senc.size() << "\n";
     std::cout << "sum: " << sum << "\n";

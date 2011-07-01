@@ -17,7 +17,13 @@ TOLUA_API int  tolua_EShared_open (lua_State* tolua_S);
 namespace Pixy {
 namespace Net {
 
-	instance::instance(players_t in_players) {
+	instance::instance(players_t in_players, boost::asio::io_service& io_service)
+  : players_(in_players),
+    dispatcher_(io_service),
+    strand_(io_service),
+    active_puppet_(),
+    active_player_()
+  {
 		uuid_ = boost::uuids::random_generator()();
 
 		started_ = false;
@@ -26,7 +32,7 @@ namespace Net {
 		uid_generator_ = 0;
 
 		active_player_.reset();
-    active_puppet_ = 0;
+    active_puppet_.reset();
 
     lua_ = 0;
 
@@ -34,8 +40,11 @@ namespace Net {
 		lua_log_ = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "Lua");
 
 		// register our players
-    for (auto player : in_players)
-      players_.push_back(player);
+    //for (auto player : in_players)
+    //  players_.push_back(player);
+
+    running_ = true;
+    std::cout << "an instance has started\n";
 	}
 
 	instance::~instance() {
@@ -55,7 +64,7 @@ namespace Net {
     }
 
     active_player_.reset();
-    active_puppet_ = 0;
+    active_puppet_.reset();
 	}
 
   bool instance::operator==(instance const& rhs) {
@@ -66,7 +75,7 @@ namespace Net {
     for (auto player : players_)
       subscribe(player);
 
-		//init_lua();
+		init_lua();
 
 		bind_handlers();
 
@@ -150,20 +159,23 @@ namespace Net {
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
 	player_cptr instance::get_sender(const Event& evt) {
-    player_events_t::const_iterator itr = player_events_.find(&evt);
-    if (itr != player_events_.end())
-      return itr->second;
+    //~ player_events_t::const_iterator itr = player_events_.find(&evt);
+    //~ if (itr != player_events_.end())
+      //~ return itr->second;
+    for (auto player : players_)
+      if (player == evt.Sender)
+        return player;
 
     throw UnknownEventSender( std::string("in instance::get_sender: " + stringify((int)evt.UID)) );
 	}
 
-  Puppet* instance::get_puppet(int inUID) {
-    puppets_t::const_iterator lPuppet;
-    for (lPuppet = puppets_.begin(); lPuppet != puppets_.end(); ++lPuppet)
-      if ((*lPuppet)->getUID() == inUID)
-        return (*lPuppet);
+  puppet_ptr instance::get_puppet(int inUID) {
+    for (auto puppet : puppets_)
+      if (puppet->getUID() == inUID)
+        return puppet;
 
-    return 0;
+    assert(false);
+    //return NULL;
   }
 
   Spell* instance::get_spell(int inUID) {
@@ -174,7 +186,7 @@ namespace Net {
     return units_.find(inUID)->second;
   }
 
-  player_cptr instance::get_player(Puppet const *inPuppet) {
+  player_cptr instance::get_player(puppet_ptr inPuppet) {
     for (auto player : players_)
       if (player->get_puppet()->getUID() == inPuppet->getUID())
         return player;
@@ -196,60 +208,15 @@ namespace Net {
 		send(get_sender(evt), evt);
 	}
 
-#if 0 // __DISABLED__ no longer using BitStream / RakNet
-  void
-  instance::broadcastCompressed(
-    MessageID inMsgId,
-    std::ostringstream const& raw)
-  {
-    broadcastCompressed(inMsgId, raw.str());
-  }
-
-  void
-  instance::broadcastCompressed(
-    MessageID inMsgId,
-    std::string const& raw)
-  {
-    using std::string;
-    using std::vector;
-
-    size_t rawSize = raw.size();
-
-    // prepare the raw stream
-    vector<unsigned char> venc, vraw(raw.begin(), raw.end());
-
-    // encode it
-    Archiver::encodeLzma(venc, vraw);
-
-    // convert to std::string so we can write it into
-    string senc(venc.begin(), venc.end());
-    venc.clear();
-    vraw.clear();
-
-    // hash it
-    const char *sum = MD5((unsigned char*)senc.c_str()).hex_digest();
-
-		mStream.Reset();
-		mStream.AssertStreamEmpty(); // _DEBUG_
-    mStream.Write((unsigned char)inMsgId);
-    mStream.Write(sum, strlen(sum));
-    mStream.Write<size_t>(rawSize);
-    mStream.Write(senc.c_str(), senc.size());
-
-    broadcast(mStream);
-  }
-
-#endif
-
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Bootstrap
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
 	void instance::bind_handlers() {
-		//bindToName("Ready", this, &instance::on_player_ready);
-    //bindToName("StartTurn", this, &instance::on_start_turn);
-    //bindToName("EndTurn", this, &instance::on_end_turn);
-		//bindToName("CastSpell", this, &instance::on_cast_spell);
+    dispatcher_.bind(EventUID::Ready, this, &instance::on_player_ready);
+    dispatcher_.bind(EventUID::StartTurn, this, &instance::on_start_turn);
+    dispatcher_.bind(EventUID::EndTurn, this, &instance::on_end_turn);
+		dispatcher_.bind(EventUID::CastSpell, this, &instance::on_cast_spell);
 	}
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
@@ -263,6 +230,8 @@ namespace Net {
     // start the first player's turn, and track them
 		active_puppet_ = puppets_.front();
     active_player_ = get_player(active_puppet_);
+
+    log_->debugStream() << "it's now " << active_player_->get_username() << "'s turn";
 		Event evt(EventUID::StartTurn);
 		send(active_player_, evt);
 
@@ -284,6 +253,7 @@ namespace Net {
 		}
 
 		//players_.push_back(player);
+    assert(player->get_puppet());
 
     player->get_puppet()->setUID(generate_uid());
     player->get_puppet()->live();
@@ -295,7 +265,7 @@ namespace Net {
 
 		log_->debugStream()
 		<< "a puppet named "
-		<< player->get_puppet()->getName()
+		<< player->get_puppet()->getName() << "(" << player->get_puppet()->getUID() << ")"
 		<< " has joined the instance";
 	}
 
@@ -304,8 +274,8 @@ namespace Net {
     log_->infoStream() << "sending puppets data to clients";
 
     list<Puppet const*> lPuppets;
-    for (const Puppet* puppet : puppets_)
-      lPuppets.push_back(puppet);
+    for (auto puppet : puppets_)
+      lPuppets.push_back(puppet.get());
 
     std::ostringstream stream;
     server::singleton().get_resmgr().puppets_to_stream(stream, lPuppets);
@@ -314,28 +284,45 @@ namespace Net {
     broadcast(evt);
 	}
 
+  void instance::enqueue(const Event& evt, player_cptr sender) {
+    if (!running_)
+      return;
+
+    assert(evt.Sender);
+    std::cout << "instance: got evt from " << evt.Sender->get_username() << "\n";
+    dispatcher_.deliver(evt);
+  }
+
 	const int instance::generate_uid() {
 	  return ++uid_generator_;
 	}
 
   void instance::on_dropout(player_cptr player) {
-    log_->infoStream()
-      << "detaching player "
-      << players_.back()->get_username()
-      << " from instance";
+    strand_.post(
+      [&, player]() {
+      log_->infoStream()
+        << "detaching player "
+        << player->get_username()
+        << " from instance";
 
-    // TODO: ask opponents if they'd like to wait for player to rejoin
-    players_.remove(player);
+      if (active_player_ == player)
+        active_player_.reset();
 
-    if (players_.empty())
-      server::singleton()._shutdown_instance(shared_from_this());
+      // TODO: ask opponents if they'd like to wait for player to rejoin
+      players_.remove(player);
+
+      if (players_.empty())
+        server::singleton()._shutdown_instance(shared_from_this());
+    });
+
+    running_ = false;
   }
 
   /*
    * format:
    * $owner-uid;nr-spells;spell1-name;spell1-uid;spell2-name;spell2-uid;...;\n
    */
-	void instance::draw_spells(Puppet* inPuppet, int inNrOfSpells) {
+	void instance::draw_spells(puppet_ptr inPuppet, int inNrOfSpells) {
 
     if (!inPuppet)
       inPuppet = active_puppet_;
@@ -393,16 +380,16 @@ namespace Net {
 	 *	Event Handlers
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-	bool instance::on_player_ready(const Event& inEvt) {
+	void instance::on_player_ready(const Event& inEvt) {
 
 		// are all players ready?
 		if ((++nr_ready_players_) == players_.size())
 			start();
 
-		return true;
+		return;
 	}
 
-  bool instance::on_start_turn(const Event& inEvt) {
+  void instance::on_start_turn(const Event& inEvt) {
     // start timer and shizzle
 
     // send to all players except the active one
@@ -419,13 +406,13 @@ namespace Net {
     log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
   }
 
-	bool instance::on_end_turn(const Event& inEvt) {
+	void instance::on_end_turn(const Event& inEvt) {
     // validate: make sure the sender is the active puppet
     if (get_sender(inEvt)->get_puppet() != active_puppet_) {
       log_->errorStream()
         << get_sender(inEvt)->get_puppet()->getName()
         << " is trying to end his opponent's turn!";
-      return true;
+      return;
     }
 		// is any of its units charging?
 			// if yes, toggle into Charging state
@@ -439,11 +426,14 @@ namespace Net {
     if (active_puppet_ == puppets_.back())
       active_puppet_ = puppets_.front();
     else {
-      for (auto puppet : puppets_)
-        if (puppet == active_puppet_) {
-          active_puppet_ = (++puppet);
+      bool found = false;
+      for (auto puppet : puppets_) {
+        if (found)
+          active_puppet_ = puppet;
           break;
-        }
+        if (puppet == active_puppet_)
+          found = true;
+      }
     }
 
     active_player_ = get_player(active_puppet_);
@@ -453,25 +443,25 @@ namespace Net {
 
 		Event evt(EventUID::StartTurn);
     send(active_player_, evt);
-    this->draw_spells();
+    this->draw_spells(active_puppet_);
 
-		return true;
+		return;
 	}
 
-	bool instance::on_cast_spell(const Event& inEvt) {
+	void instance::on_cast_spell(const Event& inEvt) {
 		// dispatch to Lua
 		lua_getfield(lua_, LUA_GLOBALSINDEX, "processSpell");
 		if(!lua_isfunction(lua_, 1))
 		{
 			log_->errorStream() << "could not find Lua event processor!";
 			lua_pop(lua_,1);
-			return true;
+			return;
 		}
 
     if (!inEvt.hasProperty("Spell")) {
       Event evt(inEvt);
       reject(evt);
-      return true;
+      return;
     }
 
 		// find the spell object
@@ -488,7 +478,7 @@ namespace Net {
 		  log_->errorStream() << "couldn't find requested Spell with id " << lSpellId;
       Event evt(inEvt);
 		  reject(evt);
-		  return true;
+		  return;
 		}
 
 		tolua_pushusertype(lua_,(void*)lCaster,"Pixy::Entity");
@@ -504,7 +494,7 @@ namespace Net {
 
 		lua_remove(lua_, lua_gettop(lua_));
 
-		return result;
+		//return result;
 	}
 }
 }

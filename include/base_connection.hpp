@@ -34,7 +34,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include "message_handler.hpp"
+#include "dispatcher.hpp"
 #include "event.hpp"
 
 namespace Pixy {
@@ -52,7 +52,7 @@ namespace Net {
 
     /// Get the socket associated with the base_connection.
     boost::asio::ip::tcp::socket& socket();
-    message_handler& get_message_handler();
+    dispatcher& get_dispatcher();
 
     /// Start the first asynchronous operation for the base_connection.
     virtual void start();
@@ -65,10 +65,10 @@ namespace Net {
 
     virtual void read();
 
-    virtual void
-    handle_read(
-      const boost::system::error_code& error,
-      std::size_t bytes_transferred);
+    void
+    handle_read( const boost::system::error_code& error, std::size_t bytes_transferred);
+
+    virtual void handle_inbound();
 
     boost::asio::ip::tcp::socket socket_;
     boost::asio::streambuf request_;
@@ -76,7 +76,7 @@ namespace Net {
     boost::asio::streambuf response_;
     boost::asio::strand strand_;
 
-    message_handler message_handler_;
+    dispatcher dispatcher_;
     Event outbound, inbound;
 
     bool closed_;

@@ -184,7 +184,7 @@ namespace Net {
     match_finder_ = new match_finder(io_service_);
 
     // start our player ping timer
-    refresh_timer();
+    //refresh_timer();
 
     // wait for all threads in the pool to exit
     workers.join_all();
@@ -263,7 +263,7 @@ namespace Net {
   void server::_launch_instance(std::list<player_cptr> players) {
     std::cout << "starting an instance\n";
     strand_.post( [&, players]() -> void {
-      new_instance_.reset(new instance(players));
+      new_instance_.reset(new instance(players, io_service_));
       new_instance_->bootstrap();
       instances_.push_back(new_instance_);
       new_instance_.reset();

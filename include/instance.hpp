@@ -13,6 +13,7 @@
 #include "PixyLog.h"
 #include "PixyShared.h"
 #include "player.hpp"
+#include "dispatcher.hpp"
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -34,7 +35,7 @@ using std::list;
 namespace Pixy {
 namespace Net {
 	typedef list<player_cptr>	players_t;
-	typedef list<Puppet*>	puppets_t;
+	typedef list<puppet_ptr>	puppets_t;
   typedef std::map<int, Spell*> spells_t;
   typedef std::map<int, Unit*> units_t;
 
@@ -47,7 +48,7 @@ namespace Net {
 	class Server;
 	class instance : public boost::enable_shared_from_this<instance> {
 	public:
-		instance(players_t);
+		instance(players_t, boost::asio::io_service&);
     instance() = delete;
     instance(const instance&) = delete;
     instance& operator=(const instance&) = delete;
@@ -64,6 +65,8 @@ namespace Net {
 		boost::uuids::uuid get_uuid() const;
 
 		void lua_log(std::string);
+
+    void enqueue(const Event&, player_cptr);
 
 		//players_t const& get_players() const;
 
@@ -114,7 +117,7 @@ namespace Net {
      *
      * if inPuppet was not passed, the active puppet is assumed to be chosen
 		 */
-		void draw_spells(Puppet* inPuppet = 0, int inNrOfSpells = 2);
+		void draw_spells(puppet_ptr inPuppet, int inNrOfSpells = 2);
 
 		/* +-+-+-+-+-+-+-+ *
 		 * EVENT HANNDLERS *
@@ -125,14 +128,14 @@ namespace Net {
 		 *	once both players send this message, teh game will start by
 		 *	sending event "StartTurn"
 		 */
-		bool on_player_ready(const Event& inEvt);
+		void on_player_ready(const Event& inEvt);
 
     /*
      * Once this event is received, it means the puppet received the StartTurn
      * order and has started their local timer. Here we begin the turn timer
      * and broadcast to all players that this puppet's turn has started.
      */
-    bool on_start_turn(const Event& inEvt);
+    void on_start_turn(const Event& inEvt);
 
     /*
      * acknowledges player's request to end their turn, checks whether the
@@ -140,9 +143,9 @@ namespace Net {
      * blocking phase. If sender is not charging, send StartTurn to opponent
      * puppet and wait for ack.
      */
-    bool on_end_turn(const Event& inEvt);
+    void on_end_turn(const Event& inEvt);
 
-		bool on_cast_spell(const Event& inEvt);
+		void on_cast_spell(const Event& inEvt);
 
 		log4cpp::Category	*log_;
 		//Server				*mServer;
@@ -159,7 +162,7 @@ namespace Net {
 
 		bool		started_; //! are the players ready?
 		int			nr_ready_players_; //! how many players are ready?
-		Puppet		*active_puppet_; //! the puppet whose turn is active
+		puppet_ptr		active_puppet_; //! the puppet whose turn is active
 		player_cptr		active_player_; //! owner of the active puppet
 
 		int	uid_generator_; //! assigns ids to all entities
@@ -197,13 +200,17 @@ namespace Net {
 		 */
 		void create_puppets();
 
-    Puppet* get_puppet(int inUID);
+    puppet_ptr get_puppet(int inUID);
     Spell* get_spell(int inUID);
     Unit* get_unit(int inUID);
-    player_cptr get_player(Puppet const* inPuppet);
+    player_cptr get_player(puppet_ptr inPuppet);
 
     std::ostringstream drawn_spells_;
+    dispatcher dispatcher_;
+    boost::asio::strand strand_;
     //BitStream mStream;
+
+    bool running_;
 
 	};
 

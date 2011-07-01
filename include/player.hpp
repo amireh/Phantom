@@ -32,7 +32,7 @@ namespace Net {
     Player& operator=(const Player&) = delete;
 
     instance_ptr get_instance() const;
-		Puppet* get_puppet() const;
+		puppet_ptr get_puppet() const;
 		std::string const& get_puppet_name() const;
 		std::string const& get_username() const;
     bool is_online() const;
@@ -45,7 +45,7 @@ namespace Net {
     friend class instance;
 
     /// name of the puppet the player joined the queue with
-		void set_puppet(Puppet* inPuppet);
+		void set_puppet(puppet_ptr inPuppet);
 		void set_instance(instance_ptr);
     void set_connection(connection*);
     void set_online(bool);
@@ -54,7 +54,7 @@ namespace Net {
     connection* conn_;
 		string username_;
     instance_ptr instance_;
-		Puppet* puppet_;
+		puppet_ptr puppet_;
 		string puppet_name_;
     bool online_;
 

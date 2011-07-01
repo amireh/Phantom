@@ -51,6 +51,8 @@ namespace Net {
       void on_login(const Event& evt);
       void on_sync_game_data(const Event& evt);
       void on_join_queue(const Event& evt);
+      void on_sync_puppet_data(const Event& evt);
+      void on_start_turn(const Event&);
   };
 
 }

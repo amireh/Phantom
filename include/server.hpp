@@ -64,13 +64,15 @@ namespace Net {
   typedef boost::shared_ptr<connection> connection_ptr;
 
   class db_manager;
-  /// The top-level class of the HTTP server.
-  class server : private boost::noncopyable
+
+  class server
   {
   public:
     /// Construct the server to listen on the specified TCP address and port, and
     /// serve up files from the given directory.
     explicit server();
+    server(const server&) = delete;
+    server& operator=(const server&) = delete;
 
     static server& singleton();
 
@@ -106,16 +108,10 @@ namespace Net {
     void resolve_paths();
     void init_logger();
 
-    void do_stop();
-
     // a thread handling io_service::run()
     void work();
 
-    // marks the connection as dead
-    void mark_dead(connection_ptr);
-
-    // cleans up all dead connections awaiting removal
-    void cleanup();
+    void handle_accept(const boost::system::error_code &e);
 
     // orders every connection to send a PING msg to track dead connections
     // @note: after all connections are pinged, server::cleanup() is called
@@ -125,10 +121,8 @@ namespace Net {
     // resets the ping timer to reactivate in another ping_interval seconds
     void refresh_timer();
 
-    /// Handle completion of an asynchronous accept operation.
-    void handle_accept(const boost::system::error_code& e);
 
-    /// The number of threads that will call io_service::run().
+    // the number of threads that will call io_service::run()
     const std::size_t thread_pool_size_;
     boost::thread_group workers;
 
@@ -139,8 +133,6 @@ namespace Net {
     /// The next connection to be accepted.
     connection_ptr new_connection_;
     std::list<connection_ptr> connections;
-    std::vector<connection_ptr> dead_connections;
-    //std::list<gconnection_ptr> guests;
 
     std::string root_path_, bin_path_, data_path_, log_path_;
 
@@ -158,10 +150,9 @@ namespace Net {
     match_finder *match_finder_;
 
     instance_ptr new_instance_;
-     std::list<instance_ptr> instances_;
+    std::list<instance_ptr> instances_;
 
     static server* __instance;
-
   };
 
 

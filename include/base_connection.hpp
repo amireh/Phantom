@@ -59,36 +59,14 @@ namespace Net {
     /// forcefully breaks all async ops and closes the socket
     virtual void stop();
 
-    //virtual void send(const message& msg);
     virtual void send(const Event& evt);
 
   protected:
 
     virtual void read();
-    virtual void do_read();
-
-    //virtual void send_msg(const message& msg);
-    virtual void do_send(const Event& msg);
-
-#if 0 // __DISABLED__
-    virtual void
-    handle_read_header(
-      const boost::system::error_code& error,
-      std::size_t bytes_transferred);
-
-    virtual void read_body();
 
     virtual void
-    handle_read_body(
-      const boost::system::error_code& error,
-      std::size_t bytes_transferred);
-
-    virtual void handle_write( const boost::system::error_code& e);
-    virtual void handle_read( const boost::system::error_code& e);
-#endif // __DISABLED__
-
-    virtual void
-    handle_read_all(
+    handle_read(
       const boost::system::error_code& error,
       std::size_t bytes_transferred);
 
@@ -99,7 +77,6 @@ namespace Net {
     boost::asio::strand strand_;
 
     message_handler message_handler_;
-    //message outbound, inbound;
     Event outbound, inbound;
 
     bool closed_;

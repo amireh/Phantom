@@ -319,19 +319,16 @@ namespace Net {
 	}
 
   void instance::on_dropout(player_cptr player) {
-    // once the players stop referencing this instance object, it will be destroyed
-    while (!players_.empty()) {
-			log_->infoStream()
-			<< "detaching player "
-			<< players_.back()->get_username()
-			<< " from instance";
-      //delete players_.back()->get_puppet();
-      //players_.back()->setPuppet(0);
-      players_.back()->get_instance().reset();
-      players_.pop_back();
-    }
+    log_->infoStream()
+      << "detaching player "
+      << players_.back()->get_username()
+      << " from instance";
 
-    server::singleton()._shutdown_instance(shared_from_this());
+    // TODO: ask opponents if they'd like to wait for player to rejoin
+    players_.remove(player);
+
+    if (players_.empty())
+      server::singleton()._shutdown_instance(shared_from_this());
   }
 
   /*

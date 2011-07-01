@@ -28,7 +28,7 @@ namespace Net {
       delete puppet_;
 
 		puppet_ = 0;
-    //instance_.reset();
+    instance_.reset();
     conn_ = 0;
 		std::cout << "Player is destroyed!\n";
 	}

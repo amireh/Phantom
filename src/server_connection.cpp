@@ -54,8 +54,8 @@ namespace Net {
 
   void connection::ping() {
     send(pingevt_);
-    ++ping_timeouts_;
-    if (ping_timeouts_ >= 3)
+
+    if ((++ping_timeouts_) >= 3)
       strand_.post( boost::bind(&connection::stop, shared_from_this()));
 
     /*try {
@@ -81,32 +81,33 @@ namespace Net {
     if (!evt.hasProperty("Username") || !evt.hasProperty("Password"))
       return;
 
-    db_manager& dbmgr = server::singleton().get_dbmgr();
-    bool success = true;
-    std::string inUsername, inPassword;
-
-    inUsername = evt.getProperty("Username");
+    std::string inUsername = evt.getProperty("Username");
     // TODO: use magic/salt to generate passwords (eg concatenate pw + salt and md5sum it)
     std::string _md5pw = MD5((unsigned char*)evt.getProperty("Password").c_str()).hex_digest();
+    // __DEBUG__
     std::cout
       << "authenticating user " << inUsername
-      << " with password " << inPassword << " hashed " << _md5pw << "\n";
+      << " with password " << " hashed " << _md5pw << "\n";
 
-    dbmgr.login(inUsername, _md5pw, boost::bind(&connection::on_login_feedback, this, _1, _2) );
-  }
+    // log the player in and send feedback when received
+    db_manager& dbmgr = server::singleton().get_dbmgr();
+    dbmgr.login(
+      inUsername,
+      _md5pw,
+      [&](db_result rc, std::string username) -> void {
+        Event evt(EventUID::Login);
+        if (rc != db_result::Ok) {
+          evt.Feedback = EventFeedback::Error;
+          std::cout << "client " << username << " couldnt log in\n";
+        } else {
+          std::cout << "client " << username << " logged in successfully\n";
+          evt.Feedback = EventFeedback::Ok;
+          promote(username);
+        }
 
-  void connection::on_login_feedback(db_result rc, std::string username) {
-    Event evt(EventUID::Login);
-    if (rc != db_result::Ok) {
-      evt.Feedback = EventFeedback::Error;
-      std::cout << "client " << username << " couldnt log in\n";
-    } else {
-      std::cout << "client " << username << " logged in successfully\n";
-      evt.Feedback = EventFeedback::Ok;
-      promote(username);
-    }
-
-    send(evt);
+        send(evt);
+      }
+    );
   }
 
   void connection::promote(std::string& username) {
@@ -137,24 +138,26 @@ namespace Net {
       return;
 
     std::string puppet_name = evt.getProperty("Puppet");
+
 		// load the puppet
 		Puppet* puppet = new Puppet();
     puppet->setName(puppet_name);
 
     db_manager& dbmgr = server::singleton().get_dbmgr();
+    dbmgr.load_puppet(
+      puppet_name,
+      *puppet,
+      [&](db_result rc) -> void {
+        if (rc > db_result::Ok) {
+          throw BadEvent(std::string("unknown puppet named: ") + player_->get_puppet()->getName());
+        }
 
-    dbmgr.load_puppet(puppet_name, *puppet, boost::bind(&connection::on_load_puppet, this, _1));
+        server::singleton().get_match_finder().join_queue(player_);
+      }
+    );
 
 		player_->set_puppet(puppet);
   }
 
-  void connection::on_load_puppet(db_result rc) {
-    if (rc > db_result::Ok) {
-			throw BadEvent(std::string("unknown puppet named: ") + player_->get_puppet()->getName());
-    }
-
-    server::singleton().get_match_finder().join_queue(player_);
-    //send(Event(EventUID::JoinQueue, EventFeedback::Ok));
-  }
 } // namespace Net
 } // namespace Pixy

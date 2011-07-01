@@ -69,46 +69,29 @@ void base_connection::stop() {
 }
 
 void base_connection::read() {
-  strand_.post( boost::bind(&base_connection::do_read, shared_from_this() ) );
+  strand_.post( [&]() -> void {
+    inbound.reset();
+    request_.consume(request_.size());
+
+    /*this->async_read( // s11n
+      inbound,
+      boost::bind(&base_connection::handle_read, shared_from_this(), boost::asio::placeholders::error));*/
+
+    async_read_until(
+      socket_,
+      request_,
+      Event::Footer,
+      boost::bind(
+        &base_connection::handle_read,
+        shared_from_this(),
+        boost::asio::placeholders::error,
+        boost::asio::placeholders::bytes_transferred
+      )
+    );
+  });
 }
 
-void base_connection::do_read() {
-  inbound.reset();
-  request_.consume(request_.size());
-
-  /*this->async_read( // s11n
-    inbound,
-    boost::bind(&base_connection::handle_read, shared_from_this(), boost::asio::placeholders::error));*/
-
-  async_read_until(
-    socket_,
-    request_,
-    Event::Footer,
-    boost::bind(
-      &base_connection::handle_read_all,
-      shared_from_this(),
-      boost::asio::placeholders::error,
-      boost::asio::placeholders::bytes_transferred
-    )
-  );
-
-#if 0 // __DISABLED__
-  /*async_read(
-    socket_,
-    request_,
-    boost::asio::transfer_at_least(message::header_length),
-    boost::bind(
-      &base_connection::handle_read_header,
-      shared_from_this(),
-      boost::asio::placeholders::error,
-      boost::asio::placeholders::bytes_transferred
-    )
-  );*/
-#endif
-
-}
-
-void base_connection::handle_read_all(
+void base_connection::handle_read(
   const boost::system::error_code& e,
   std::size_t bytes_transferred)
 {
@@ -133,150 +116,32 @@ void base_connection::handle_read_all(
     stop();
 }
 
-
-#if 0 // __DISABLED__
-
-void base_connection::handle_read( const boost::system::error_code& e) { // s11n
-  if (!e) {
-    //std::cout << "got a message with data: " << (int)inbound.UID << "\n";
-    message_handler_.deliver(inbound);
-
-    inbound_data_.clear();
-
-    // read next message
-    strand_.post( boost::bind(&base_connection::read, shared_from_this()) );
-  } else {
-    std::cerr << "error occured while reading inbound msg: " << e.message() << "\n";
-    stop();
-  }
-}
-
-void base_connection::read_body() { // fragmented
-  //std::cout << "reading a message's body\n";
-  socket_.async_read_some(boost::asio::buffer(body_, msg_.length - msg_.body.size()),
-    strand_.wrap(
-      boost::bind(&base_connection::handle_read_body, shared_from_this(),
-        boost::asio::placeholders::error,
-        boost::asio::placeholders::bytes_transferred)));
-}
-
-
-void base_connection::handle_read_header(const boost::system::error_code& e, // fragmented
-    std::size_t bytes_transferred)
-{
-  if (!e)
-  {
-    bool result = message_parser_.parse_header(msg_, request_);
-
-    if (result)
-    {
-      // message has a valid header
-      if (msg_.length != 0)
-        // let's read the body
-        read_body();
-      else {
-        // it's a content-less msg, dispatch and read the next
-        // ...
-        message_handler_.deliver(msg_);
-        read();
-      }
-    }
-    else
-    {
-      // invalid request
-      /*reply_ = reply::stock_reply(reply::bad_request);
-      boost::asio::async_write(socket_, reply_.to_buffers(),
-          strand_.wrap(
-            boost::bind(&base_connection::handle_write, shared_from_this(),
-              boost::asio::placeholders::error)));*/
-
-      stop();
-    }
-
-  } else
-    // If an error occurs then no new asynchronous operations are started. This
-    // means that all shared_ptr references to the base_connection object will
-    // disappear and the object will be destroyed automatically after this
-    // handler returns. The base_connection class's destructor closes the socket.
-
-    stop();
-}
-
-void base_connection::handle_read_body(const boost::system::error_code& e,
-    std::size_t bytes_transferred)
-{
-  if (!e) {
-    bool result = message_parser_.parse_body(msg_, request_);
-    if (result) {
-      // message is ready for dispatching
-      message_handler_.deliver(msg_);
-
-      // read next message
-      read();
-    } else {
-      // need more data
-      read_body();
-    }
-
-  } else
-    stop();
-}
-
-
-#endif // __DISABLED__
-
 void base_connection::send(const Event& evt) {
-  strand_.post( boost::bind(&base_connection::do_send, shared_from_this(), evt));
-}
-void base_connection::do_send(const Event& evt) {
+  strand_.post( [&, evt]() {
+    std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
 
-  std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
+    boost::system::error_code ec;
 
-  boost::system::error_code ec;
+    //response_.consume(response_.size());
 
-  //response_.consume(response_.size());
+    outbound = Event(evt);
+    outbound.toStream(response_);
 
-  outbound = Event(evt);
-  outbound.toStream(response_);
+    size_t n = boost::asio::write(socket_, response_.data(), boost::asio::transfer_all(), ec);
+    std::cout << "sent data, buffer now has " << response_.size() << "\n";
+    /*this->async_write(outbound,
+            boost::bind(&base_connection::handle_write, shared_from_this(),
+              boost::asio::placeholders::error));*/
 
-  size_t n = boost::asio::write(socket_, response_.data(), boost::asio::transfer_all(), ec);
-  std::cout << "sent data, buffer now has " << response_.size() << "\n";
-  /*this->async_write(outbound,
-          boost::bind(&base_connection::handle_write, shared_from_this(),
-            boost::asio::placeholders::error));*/
+    if (!ec) {
+      //std::cout << " sent " << n << "bytes";
+      response_.consume(n);
+      //std::cout << " cleared response buf ( " << response_.size() << ")\n";
+    } else
+      stop();
 
-  if (!ec) {
-    //std::cout << " sent " << n << "bytes";
-    response_.consume(n);
-    //std::cout << " cleared response buf ( " << response_.size() << ")\n";
-  } else
-    stop();
-
-#if 0 // __DISABLED__
-  /*boost::asio::async_write(socket_, response_,//outbound.to_buffers(),
-  strand_.wrap(
-    boost::bind(&base_connection::handle_write, shared_from_this(),
-      boost::asio::placeholders::error,
-      boost::asio::placeholders::bytes_transferred)));*/
-#endif
-
+  });
 }
 
-#if 0 // __DISABLED__
-void base_connection::handle_write(const boost::system::error_code& e )
-{
-  if (e)
-  {
-    std::cout << "an error occured while sending the event : " << e.message() << "\n";
-    stop();
-  } else {
-    outbound_data_.clear();
-    /*std::cout << "clearing outbound buffer which had " << response_.size() << ", it said it xferred " << bytes_transferred <<" and post-clearing:";
-    response_.consume(bytes_transferred);
-    std::cout << response_.size() << "\n";*/
-  }
-}
-#endif // __DISABLED__
-
-} // namespace server3
-} // namespace http
+} // namespace Net
+} // namespace Pixy

@@ -10,6 +10,7 @@ SET(Project_SRCS
   db_manager.cpp
   player.cpp
   sresource_manager.cpp
+  match_finder.cpp
   #instance.cpp
 )
 # the executable

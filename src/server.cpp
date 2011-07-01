@@ -38,7 +38,8 @@ server::server()
     strand_(io_service_),
     ping_interval(5),
     dbmgr_(0),
-    resmgr_(0)
+    resmgr_(0),
+    match_finder_(0)
 {
   // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
   boost::asio::ip::tcp::resolver resolver(io_service_);
@@ -80,14 +81,17 @@ void server::run()
   resmgr_ = new sresource_manager();
   resmgr_->dump();
 
+  match_finder_ = new match_finder(io_service_);
+
   // start our player ping timer
-  refresh_timer();
+  //refresh_timer();
 
   // Wait for all threads in the pool to exit.
   workers.join_all();
 
-  delete dbmgr_;
+  delete match_finder_;
   delete resmgr_;
+  delete dbmgr_;
 
   if (log_) {
     delete log_appender_;
@@ -266,6 +270,12 @@ db_manager& server::get_dbmgr() {
 
 sresource_manager& server::get_resmgr() {
   return *resmgr_;
+}
+match_finder& server::get_match_finder() {
+  return *match_finder_;
+}
+void server::_launch_instance(std::list<player_cptr> players) {
+  std::cout << "starting an instance\n";
 }
 
 } // namespace Net

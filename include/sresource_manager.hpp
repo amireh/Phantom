@@ -49,9 +49,9 @@ namespace Net {
 
       //bool deletePuppet(Player* inPlayer, RakString inName);
 
-      Puppet* getPuppet(Player*, std::string);
+      //Puppet* get_puppet(Player*, std::string);
 
-      std::vector<Puppet*> getPuppets(Player* inPlayer);
+      //std::vector<Puppet*> get_puppets(Player* inPlayer);
 
       //~ void puppetToStream(BitStream& out, const Puppet& inPuppet);
       //~ void puppetsToStream(BitStream& out, const list<Puppet const*>& inPuppets);

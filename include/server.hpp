@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2011 Ahmad Amireh <ahmad@amireh.net>
+1 *  Copyright (c) 2011 Ahmad Amireh <ahmad@amireh.net>
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a
  *  copy of this software and associated documentation files (the "Software"),
@@ -48,6 +48,7 @@
 #include "server_connection.hpp"
 #include "db_manager.hpp"
 #include "sresource_manager.hpp"
+#include "match_finder.hpp"
 
 // LOGGER
 #include "log4cpp/Category.hh"
@@ -76,18 +77,22 @@ namespace Net {
 
     db_manager& get_dbmgr();
     sresource_manager& get_resmgr();
+    match_finder& get_match_finder();
 
     std::string const& get_root_path();
     std::string const& get_bin_path();
     std::string const& get_data_path();
 
   protected:
-    // connection can mark itself as dead by calling close()
+    // connection can mark itself as dead by calling _close()
     friend class connection;
+    friend class match_finder;
 
     // marks the connection as dead and will be removed sometime later
     // @note: called by the connection itself when it needs to shutdown
     void _close(connection_ptr);
+
+    void _launch_instance(std::list<player_cptr>);
 
   private:
 
@@ -143,6 +148,7 @@ namespace Net {
 
     db_manager* dbmgr_;
     sresource_manager *resmgr_;
+    match_finder *match_finder_;
 
     static server* __instance;
 

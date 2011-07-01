@@ -1,20 +1,23 @@
 #include "event.hpp"
 #include "PixyUtility.h"
-
+#include <boost/thread/mutex.hpp>
 namespace Pixy {
 namespace Net {
+
+  boost::mutex global_stream_lock;
 
   const char* Event::Footer = "\r\n\r\n";
 	Event::Event() {
     reset();
   }
 
-  Event::Event(const EventUID inUID)
+  Event::Event(const EventUID inUID, EventFeedback inFeedback, unsigned char inFlags)
   : UID(inUID),
-    Options(0),
-    Feedback(EventFeedback::Unassigned),
+    Options(inFlags),
+    Feedback(inFeedback),
     Length(0),
-    Checksum(0)
+    Checksum(0),
+    Rawsize(0)
   {
 		Properties.clear();
 	}
@@ -121,13 +124,17 @@ namespace Net {
 
     int bytes_received = in.size();
     if (bytes_received < Event::HeaderLength + Event::FooterLength) {
+      global_stream_lock.lock();
       std::cerr
         << "message is too short (" << bytes_received
         << " out of " << Event::HeaderLength + Event::FooterLength << "!!\n";
+      global_stream_lock.unlock();
       return false;
     }
 
+    global_stream_lock.lock();
     std::cout << "received " << bytes_received << "bytes of data\n";
+    global_stream_lock.unlock();
 
     char sp1;
     unsigned char uid, feedback, flags;
@@ -152,17 +159,23 @@ namespace Net {
     if ((this->UID < EventUID::Unassigned || this->UID > EventUID::SanityCheck)
         || (this->Length > Event::MaxLength)
         || (this->Feedback < EventFeedback::Unassigned || this->Feedback > EventFeedback::SanityCheck)) {
+      global_stream_lock.lock();
       std::cerr << "request failed header sanity check\n";
+      global_stream_lock.unlock();
       return false;
     }
 
     // there must be N+sizeof(int) bytes of properties where N > in_bytes - signature
     if (this->Length > 0 && (bytes_received - Event::HeaderLength - Event::FooterLength < this->Length+sizeof(int))) {
+      global_stream_lock.lock();
       std::cerr << "invalid properties length: " << this->Length << "\n";
+      global_stream_lock.unlock();
       return false;
     }
 
-    std::cout << "event uid : " << (int)this->UID << " and length: " << this->Length << "\n";
+    global_stream_lock.lock();
+    std::cout << "event uid : " << (int)this->UID << "(" << _uid_to_string(this->UID) << ")" << " and length: " << this->Length << "\n";
+    global_stream_lock.unlock();
 
     // parse properties
     if (this->Length > 0) {
@@ -170,7 +183,9 @@ namespace Net {
         is >> this->Rawsize;
         is.get();
 
+        global_stream_lock.lock();
         std::cout << "a compressed event, raw size: " << this->Rawsize << "\n";
+        global_stream_lock.unlock();
       }
 
       int checksum;
@@ -184,7 +199,9 @@ namespace Net {
       // verify CRC checksum
       this->Checksum = Event::_CRC32(props);
       if (this->Checksum != checksum) {
+        global_stream_lock.lock();
         std::cerr << "CRC mismatch, aborting: " << this->Checksum << " vs " << checksum << " for " << props << " => " << props.size() << "\n";
+        global_stream_lock.unlock();
         //delete props;
         return false;
       }
@@ -205,7 +222,9 @@ namespace Net {
     }
 
     // skip the footer
+    global_stream_lock.lock();
     std::cout << in.size() << " bytes left\n";
+    global_stream_lock.unlock();
     assert(in.size() == Event::FooterLength);
     in.consume(Event::FooterLength);
 
@@ -244,7 +263,9 @@ namespace Net {
     if (!props.empty()) {
       if ((this->Options & Event::Compressed) == Event::Compressed) {
         stream << (uint32_t)this->Rawsize << " ";
+        global_stream_lock.lock();
         std::cout << "dumping raw size of compressed event: " << this->Rawsize << "\n";
+        global_stream_lock.unlock();
       }
 
       stream << Event::_CRC32(props) << " ";
@@ -258,7 +279,58 @@ namespace Net {
       //~ << "->" << stringify((uint16_t)props.size()) << ")\n";
 
     stream << Event::Footer;
-    //std::cout << "post-dump: " << out.size() << "bytes \n";
+    global_stream_lock.lock();
+    std::cout << "post-dump: " << out.size() << "bytes \n";
+    global_stream_lock.unlock();
+  }
+
+  std::string Event::_uid_to_string(EventUID uid) {
+    std::string suid = "";
+    switch (uid) {
+      case EventUID::Ping: suid = "Ping"; break;
+      case EventUID::Pong: suid = "Pong"; break;
+      case EventUID::Login: suid = "Login"; break;
+      case EventUID::Logout: suid = "Logout"; break;
+      case EventUID::ValidateClient: suid = "ValidateClient"; break;
+      case EventUID::SyncGameData: suid = "SyncGameData"; break;
+      case EventUID::CreatePuppet: suid = "CreatePuppet"; break;
+      case EventUID::UpdatePuppet: suid = "UpdatePuppet"; break;
+      case EventUID::ListRooms: suid = "ListRooms"; break;
+      case EventUID::JoinRoom: suid = "JoinRoom"; break;
+      case EventUID::LeaveRoom: suid = "LeaveRoom"; break;
+      case EventUID::SendMessage: suid = "SendMessage"; break;
+      case EventUID::SendWhisper: suid = "SendWhisper"; break;
+      case EventUID::AddFriend: suid = "AddFriend"; break;
+      case EventUID::RemoveFriend: suid = "RemoveFriend"; break;
+      case EventUID::Ban: suid = "Ban"; break;
+      case EventUID::Unban: suid = "Unban"; break;
+      case EventUID::ReportAccount: suid = "ReportAccount"; break;
+      case EventUID::OpenTicket: suid = "OpenTicket"; break;
+      case EventUID::CloseTicket: suid = "CloseTicket"; break;
+      case EventUID::JoinQueue: suid = "JoinQueue"; break;
+      case EventUID::LeaveQueue: suid = "LeaveQueue"; break;
+      case EventUID::MatchFound: suid = "MatchFound"; break;
+      case EventUID::SyncProfileData: suid = "SyncProfileData"; break;
+      case EventUID::SyncLadderData: suid = "SyncLadderData"; break;
+      case EventUID::SyncPuppetData: suid = "SyncPuppetData"; break;
+      case EventUID::Ready: suid = "Ready"; break;
+      case EventUID::MatchStarted: suid = "MatchStarted"; break;
+      case EventUID::StartTurn: suid = "StartTurn"; break;
+      case EventUID::DrawSpells: suid = "DrawSpells"; break;
+      case EventUID::TurnStarted: suid = "TurnStarted"; break;
+      case EventUID::EndTurn: suid = "EndTurn"; break;
+      case EventUID::CastSpell: suid = "CastSpell"; break;
+      case EventUID::CreateEntity: suid = "CreateEntity"; break;
+      case EventUID::UpdateEntity: suid = "UpdateEntity"; break;
+      case EventUID::Attack: suid = "Attack"; break;
+      case EventUID::Defend: suid = "Defend"; break;
+      case EventUID::MatchFinished: suid = "MatchFinished"; break;
+      case EventUID::SyncScore: suid = "SyncScore"; break;
+      case EventUID::SanityCheck: suid = "SanityCheck"; break;
+      default:
+        suid = "Unknown event!!";
+    }
+    return suid;
   }
 
 }

@@ -111,6 +111,7 @@ void base_connection::handle_read_all(
   std::size_t bytes_transferred)
 {
   if (!e) {
+    inbound.reset();
     bool result = inbound.fromStream(request_);
     if (result) {
       request_.consume(bytes_transferred);
@@ -228,8 +229,11 @@ void base_connection::do_send(const Event& evt) {
 
   boost::system::error_code ec;
 
+  response_.consume(response_.size());
+
   outbound = Event(evt);
   outbound.toStream(response_);
+
   size_t n = boost::asio::write(socket_, response_.data(), boost::asio::transfer_all(), ec);
   /*this->async_write(outbound,
           boost::bind(&base_connection::handle_write, shared_from_this(),

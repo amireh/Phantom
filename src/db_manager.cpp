@@ -324,7 +324,7 @@ namespace Net {
 			log_->errorStream() << "an unknown exception has been caught during executing a transaction! degrading gracefully..";
 		}
 
-    log_->debugStream() << "executed query: " << inQuery << ", result =" << (success ? "succ" : "failed");
+    //log_->debugStream() << "executed query: " << inQuery << ", result =" << (success ? "succ" : "failed");
 
     return success;
 

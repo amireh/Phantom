@@ -51,15 +51,18 @@ class connection : public base_connection
   void on_pong(const Event& evt);
   void on_login(const Event& evt);
   void on_login_feedback(db_result rc, std::string username);
+  void on_logout(const Event& msg);
   void on_sync_game_data(const Event& evt);
-  void on_disconnect(const Event& msg);
+  void on_join_queue(const Event& evt);
+  void on_load_puppet(db_result rc);
+
 
   Event pingevt_;
   int ping_timeouts_;
 
   void promote(std::string& username);
 
-  Player* player_;
+  boost::shared_ptr<Player> player_;
 };
 
 typedef boost::shared_ptr<connection> connection_ptr;

@@ -86,12 +86,8 @@ namespace Net {
 		/*! \brief
 		 *	Flags account with inUsername as offline in the DB.
 		 */
-    template <typename Callback>
-		void logout(const char* inUsername, Callback callback) {
-      void (db_manager::*f)(const char*, const char*, boost::tuple<Callback>)
-        = &db_manager::do_logout<Callback>;
-
-      strand_.post( boost::bind(f, this, inUsername, boost::make_tuple(callback)) );
+		void logout(std::string inUsername) {
+      strand_.post( boost::bind(&db_manager::do_logout, this, inUsername) );
     }
 
 		/*! \brief
@@ -100,11 +96,11 @@ namespace Net {
      *  false if no such puppet exists, true otherwise
 		 */
     template <typename Callback>
-		bool load_puppet(const char* inName, Puppet& inPuppet, Callback callback) {
-      void (db_manager::*f)(const char*, Puppet&, boost::tuple<Callback>)
+		bool load_puppet(std::string inName, Puppet& inPuppet, Callback callback) {
+      void (db_manager::*f)(std::string, Puppet&, boost::tuple<Callback>)
         = &db_manager::do_load_puppet<Callback>;
 
-      strand_.post( boost::bind(f, this, inName, inPuppet, boost::make_tuple(callback)) );
+      strand_.post( boost::bind(f, this, inName, boost::ref(inPuppet), boost::make_tuple(callback)) );
     }
 
 #if 0 // __DISABLED__
@@ -188,18 +184,14 @@ namespace Net {
       boost::get<0>(callback)(dbr, inUsername);
     }
 
-    template <typename Callback>
-    void do_logout(const char* inUsername, boost::tuple<Callback> callback) {
-
+    void do_logout(std::string inUsername) {
       std::ostringstream _condition;
       _condition << "username='" << inUsername << "'";
       update_record("accounts", "is_online", _condition.str().c_str(), "false");
-
-      boost::get<0>(callback)(db_result::Ok);
     }
 
     template <typename Callback>
-    void do_load_puppet(const char* inProfileName, Puppet& inPuppet, boost::tuple<Callback> callback)
+    void do_load_puppet(std::string inProfileName, Puppet& inPuppet, boost::tuple<Callback> callback)
     {
 #if 0 // __DISABLED__ waiting until server & res mgr are migrated to new API
       //pqxx::result result_;

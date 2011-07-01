@@ -9,16 +9,24 @@ namespace Net {
       //pingmsg_(message_id::ping),
       pingevt_(EventUID::Ping),
       ping_timeouts_(0),
-      player_(0)
+      player_()
   {
     message_handler_.bind(EventUID::Pong, this, &connection::on_pong);
     message_handler_.bind(EventUID::Login, this, &connection::on_login);
+    message_handler_.bind(EventUID::Logout, this, &connection::on_logout);
     message_handler_.bind(EventUID::SyncGameData, this, &connection::on_sync_game_data);
+    message_handler_.bind(EventUID::JoinQueue, this, &connection::on_join_queue);
   }
 
   connection::~connection() {
-    if (player_)
-      delete player_;
+    if (player_) {
+      // remove player from match queue
+
+      // remove from instance
+
+      // stop referencing it
+      player_.reset();
+    }
 
     std::cout << "Connection: destroyed\n";
   }
@@ -27,6 +35,20 @@ namespace Net {
     base_connection::stop();
 
     strand_.post( boost::bind(&server::_close, &server::singleton(), shared_from_this()));
+
+    if (player_) {
+      player_->set_online(false);
+
+      if (server::singleton().get_match_finder().already_queued(player_))
+        server::singleton().get_match_finder().leave_queue(player_);
+
+      if (player_->get_instance()) {
+        // notify instance that player is going down
+      }
+
+      // log out from DB
+      server::singleton().get_dbmgr().logout((std::string)player_->get_username());
+    }
   }
 
   void connection::ping() {
@@ -89,14 +111,11 @@ namespace Net {
   void connection::promote(std::string& username) {
     assert(!player_);
 
-    player_ = new Player();
-    //player_->setUserId(inUserId);
-    //player_->setGUID(inGuest);
-    player_->setUsername(username);
-    player_->setIsOnline(true);
+    player_.reset( new Player(this, username) );
+    player_->set_online(true);
   }
 
-  void connection::on_disconnect(const Event &evt) {
+  void connection::on_logout(const Event &evt) {
     std::cout << "client disconnecting\n";
     stop();
   }
@@ -110,5 +129,31 @@ namespace Net {
     send(resp);
   }
 
+  void connection::on_join_queue(const Event& evt) {
+    assert(player_);
+
+    if (!evt.hasProperty("Puppet"))
+      return;
+
+    std::string puppet_name = evt.getProperty("Puppet");
+		// load the puppet
+		Puppet* puppet = new Puppet();
+    puppet->setName(puppet_name);
+
+    db_manager& dbmgr = server::singleton().get_dbmgr();
+
+    dbmgr.load_puppet(puppet_name, *puppet, boost::bind(&connection::on_load_puppet, this, _1));
+
+		player_->set_puppet(puppet);
+  }
+
+  void connection::on_load_puppet(db_result rc) {
+    if (rc > db_result::Ok) {
+			throw BadEvent(std::string("unknown puppet named: ") + player_->get_puppet()->getName());
+    }
+
+    server::singleton().get_match_finder().join_queue(player_);
+    //send(Event(EventUID::JoinQueue, EventFeedback::Ok));
+  }
 } // namespace Net
 } // namespace Pixy

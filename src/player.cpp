@@ -9,75 +9,63 @@
 
 #include "player.hpp"
 #include "instance.hpp"
+#include "server_connection.hpp"
 
 namespace Pixy {
 namespace Net {
-	Player::Player() {
-		mPuppet = 0;
-    mInstance = 0;
-		mId = 0;
+	Player::Player(connection* conn, std::string username)
+  : username_(username),
+    conn_(conn),
+    puppet_(0),
+    instance_(0),
+    online_(false)
+  {
 		std::cout << "Player is alive!\n";
-    fOnline = false;
 	}
 
 	Player::~Player() {
-		mPuppet = 0;
-    mInstance = 0;
+    if (puppet_)
+      delete puppet_;
+
+		puppet_ = 0;
+    instance_ = 0;
+    conn_ = 0;
 		std::cout << "Player is destroyed!\n";
 	}
 
-	//~ void Player::setGUID(const RakNetGUID inGuid) {
-		//~ mGUID = inGuid;
-	//~ }
-
-	void Player::setUserId(const int inId) {
-		mId = inId;
+	void Player::set_instance(Instance* inInstance) {
+		instance_ = inInstance;
 	}
 
-	//~ void Player::setInstance(Instance* inInstance) {
-		//~ mInstance = inInstance;
-	//~ }
-
-	void Player::setPuppet(Puppet* inPuppet) {
-		mPuppet = inPuppet;
-	}
-	void Player::setPuppetName(string inProfile) {
-		mPuppetName = inProfile;
+	void Player::set_puppet(Puppet* inPuppet) {
+		puppet_ = inPuppet;
 	}
 
-	void Player::setUsername(string inUsername) {
-		mUsername = inUsername;
-	}
-
-  void Player::setIsOnline(bool inF) {
-    fOnline = inF;
+  void Player::set_online(bool inF) {
+    online_ = inF;
   }
 
 
-	//~ RakNetGUID Player::getGUID() const {
-		//~ return mGUID;
-	//~ }
-
-	int Player::getUserId() const {
-		return mId;
+	Puppet* Player::get_puppet() const {
+		return puppet_;
+	}
+	string const& Player::get_puppet_name() const {
+		return puppet_name_;
 	}
 
-	Puppet* Player::getPuppet() const {
-		return mPuppet;
+	string const& Player::get_username() const {
+		return username_;
 	}
-	string const& Player::getPuppetName() const {
-		return mPuppetName;
+	Instance* Player::get_instance() const {
+		return instance_;
 	}
 
-	string const& Player::getUsername() const {
-		return mUsername;
-	}
-	//~ Instance* Player::getInstance() const {
-		//~ return mInstance;
-	//~ }
+  void Player::send(const Event& evt) const {
+    conn_->send(evt);
+  }
 
-  bool Player::isOnline() const {
-    return fOnline;
+  bool Player::is_online() const {
+    return online_;
   }
 }
 }

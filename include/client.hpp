@@ -49,6 +49,8 @@ namespace Net {
       boost::asio::deadline_timer timer_;
 
       void on_login(const Event& evt);
+      void on_sync_game_data(const Event& evt);
+      void on_join_queue(const Event& evt);
   };
 
 }

@@ -42,11 +42,18 @@ namespace Net {
       throw e;
     }
 
-    conn_->get_message_handler().bind(EventUID::SyncGameData, this, &client::on_login);
+    conn_->get_message_handler().bind(EventUID::Login, this, &client::on_login);
+    conn_->get_message_handler().bind(EventUID::JoinQueue, this, &client::on_join_queue);
+    conn_->get_message_handler().bind(EventUID::SyncGameData, this, &client::on_sync_game_data);
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
-    Event foo(EventUID::SyncGameData);
+    Event foo(EventUID::Login);
+    foo.setProperty("Username", "Kandie");
+    foo.setProperty("Password", "tuonela");
+    conn_->send(foo);
+
+
     //foo.Options &= 0;
     //foo.Options |= Event::NoFormat;
     //foo.setProperty("Data", "ThisIsAVeryLongPuppetName;asd,lzxoc$!\r\n\r\nFOO");
@@ -57,7 +64,9 @@ namespace Net {
 
     //timer_.expires_from_now(boost::posix_time::seconds(2));
     //timer_.async_wait( boost::bind( &connection::send, conn_, foo ));
-    conn_->send(foo);
+    //conn_->send(foo);
+
+
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
@@ -71,9 +80,21 @@ namespace Net {
   }
 
   void client::on_login(const Event& evt) {
+    if (evt.Feedback == EventFeedback::Ok) {
+      std::cout << "logged in! syncing game data\n";
+      conn_->send(Event(EventUID::SyncGameData));
+      /*Event foo(EventUID::JoinQueue);
+      foo.setProperty("Puppet", "Kandie");
+      conn_->send(foo);*/
+    } else {
+      std::cerr << "err!! couldn't log in\n";
+    }
+  }
+
+  void client::on_sync_game_data(const Event& evt) {
     //std::cout << (evt.Feedback == EventFeedback::Ok ? "logged in!" : "couldn't log in") << "\n";
     //std::cout << evt.getProperty("Data");
-    ResourceManager foo;
+    ResourceManager rmgr;
 
     std::string senc = evt.getProperty("Data");
 
@@ -88,7 +109,21 @@ namespace Net {
 
     std::istringstream datastream(raw2str);
 
-    foo.populate(datastream);
+    rmgr.populate(datastream);
+
+    std::cout << "attmepting to join the queue now\n";
+
+    Event foo(EventUID::JoinQueue);
+    foo.setProperty("Puppet", "Kandie");
+    conn_->send(foo);
+
+  }
+
+  void client::on_join_queue(const Event& evt) {
+    if (evt.Feedback == EventFeedback::Ok)
+      std::cout << "I've joined the queue!\n";
+    else
+      std::cout << "I couldn't join the queue :(\n";
   }
 }
 }

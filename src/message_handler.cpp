@@ -34,29 +34,12 @@ message_handler::~message_handler() {
   events.clear();
 }
 
-/*void message_handler::deliver(const message& msg) {
-  messages.push_back(message(msg));
-
-  strand_.post( boost::bind( &message_handler::dispatch_msg, this ) );
-}*/
-
 void message_handler::deliver(const Event& evt) {
   events.push_back(Event(evt));
 
   strand_.post( boost::bind( &message_handler::dispatch, this ) );
 }
-/*
-void message_handler::dispatch_msg() {
-  const message& msg = messages.front();
 
-  msg_handlers_t::const_iterator handlers = msg_handlers_.find(msg.id);
-  if (handlers != msg_handlers_.end())
-    for (msg_handler_t handler : handlers->second)
-      //socket_->get_io_service().post( boost::bind(handler, msg) );
-      handler( msg );
-      //socket_->get_io_service().post( strand_.wrap( boost::bind(handler, msg) ) );
-}
-*/
 void message_handler::dispatch() {
   const Event& evt = events.front();
 
@@ -67,8 +50,6 @@ void message_handler::dispatch() {
 
   events.pop_front();
 }
-
-
 
 }
 }

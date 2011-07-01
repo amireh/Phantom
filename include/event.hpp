@@ -74,7 +74,7 @@ namespace Net {
     Pong,
 
     // entry events
-    Login,
+    Login, // 3
     Logout,
     ValidateClient,
     SyncGameData,
@@ -82,7 +82,7 @@ namespace Net {
     UpdatePuppet,
 
     // lobby events
-    ListRooms,
+    ListRooms, // 9
     JoinRoom,
     LeaveRoom,
     SendMessage,
@@ -96,6 +96,7 @@ namespace Net {
     CloseTicket,
     JoinQueue,
     LeaveQueue,
+    MatchFound,
     SyncProfileData,
     SyncLadderData,
 
@@ -153,7 +154,7 @@ namespace Net {
 		typedef	std::map< std::string, std::string > property_t;
 
     Event();
-		Event(const EventUID);
+    Event(const EventUID, EventFeedback = EventFeedback::Unassigned, unsigned char options=0);
     Event(const Event& src);
     Event& operator=(const Event& rhs);
 
@@ -183,6 +184,7 @@ namespace Net {
     static const char   *Footer;
 
     static int _CRC32(const std::string& my_string);
+    static std::string _uid_to_string(EventUID);
 		void _clone(const Event& src);
 	};
 

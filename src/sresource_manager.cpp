@@ -225,16 +225,16 @@ namespace Net {
     return raw_game_data_size_;
   }
 
-  Puppet* sresource_manager::getPuppet(Player* inPlayer, std::string inName) {
+  /*Puppet* sresource_manager::get_puppet(Player* inPlayer, std::string inName) {
 		Puppet* lPuppet = new Puppet();
 		try {
-      //~ server::singleton().get_dbmgr().load_puppet(inName, *lPuppet);
+      server::singleton().get_dbmgr().load_puppet(inName, *lPuppet);
     } catch (std::runtime_error& e) {
       delete lPuppet;
       lPuppet = 0;
     }
     return lPuppet;
-  }
+  }*/
 
 #if 0
   void sresource_manager::puppetToStream(BitStream& out, const Puppet& inPuppet) {

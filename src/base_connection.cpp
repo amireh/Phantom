@@ -111,7 +111,6 @@ void base_connection::handle_read_all(
   std::size_t bytes_transferred)
 {
   if (!e) {
-    inbound.reset();
     bool result = inbound.fromStream(request_);
     if (result) {
       request_.consume(bytes_transferred);
@@ -229,7 +228,7 @@ void base_connection::do_send(const Event& evt) {
 
   boost::system::error_code ec;
 
-  response_.consume(response_.size());
+  //response_.consume(response_.size());
 
   outbound = Event(evt);
   outbound.toStream(response_);

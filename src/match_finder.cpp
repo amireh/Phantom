@@ -72,7 +72,8 @@ namespace Net {
 		// look for matches
     for (auto opponent : seekers_)
       if (is_eligible(player, opponent)) {
-        strand_.post( boost::bind(&match_finder::start_match, this, player, opponent) );
+        start_match(player, opponent);
+       // strand_.post( boost::bind(&match_finder::start_match, this, player, opponent) );
         break;
       }
 

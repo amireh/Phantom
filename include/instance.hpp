@@ -1,5 +1,5 @@
 /*
- *  Instance.h
+ *  instance.h
  *  Elementum
  *
  *  Created by Ahmad Amireh on 5/29/10.
@@ -7,21 +7,22 @@
  *
  */
 
-#ifndef H_Instance_H
-#define H_Instance_H
+#ifndef H_instance_H
+#define H_instance_H
 
 #include "PixyLog.h"
 #include "PixyShared.h"
 #include "player.hpp"
-#include "EventListener.h"
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <string>
 #include <iostream>
 #include <list>
 #include <vector>
+#include <map>
 
 // LUA
 extern "C" {
@@ -32,72 +33,88 @@ extern "C" {
 using std::list;
 namespace Pixy {
 namespace Net {
-	typedef list<Player*>	players_t;
+	typedef list<player_cptr>	players_t;
 	typedef list<Puppet*>	puppets_t;
-  typedef map<int, Spell*> spells_t;
-  typedef map<int, Unit*> units_t;
+  typedef std::map<int, Spell*> spells_t;
+  typedef std::map<int, Unit*> units_t;
 
-	/*! \class Instance
+	/*! \class instance
 	 *	\brief
 	 *	The instance is where a combat match is played out. This component
 	 *	handles all the game logic and validation, keeps the players in synch,
 	 *	listens to events and transmits them to players and so on.
 	 */
 	class Server;
-	class Instance : public EventListener {
+	class instance : public boost::enable_shared_from_this<instance> {
 	public:
-		Instance(std::list<Player*> inPlayers);
-		virtual ~Instance();
+		instance(players_t);
+    instance() = delete;
+    instance(const instance&) = delete;
+    instance& operator=(const instance&) = delete;
+		virtual ~instance();
 
+    // every instance has a UUID
+    bool operator==(instance const&);
+
+    void bootstrap();
 		void start();
 
-		bool update();
+    void on_dropout(player_cptr);
 
-		void end();
+		boost::uuids::uuid get_uuid() const;
 
-    void handlePlayerDisconnected(Player* inPlayer);
+		void lua_log(std::string);
 
-		//void setId(int inId);
-		boost::uuids::uuid getUUID() const;
+		//players_t const& get_players() const;
 
-		void luaLog(std::string inMsg);
+    /*!
+     * @brief
+     * Sends the Event to all the players registered in this instance.
+     */
+		void broadcast(const Event&);
 
-		players_t const& getPlayers() const;
+    /*!
+     * @brief
+     * Sends the Event to the given player.
+     */
+    void send(player_cptr, const Event&);
 
-		/*! \brief
-		 *	helper method for transmitting an event to all registered players
+    /*!
+     * @brief
+     * Rejects the player's request by sending the event back with its
+     * Feedback property set to EventFeedback::InvalidRequest
+     */
+		void reject(Event& inEvt);
+
+    /*!
+     * @brief
+     * Generates an instance-unique UID to reference every game entity.
+     */
+		const int generate_uid();
+
+		/*!
+     * @brief
+		 * convenience method for retrieving the puppet of the event sender
 		 */
-		void broadcast(Event* inEvt, bool fForceResp = true);
-    //void broadcast(BitStream const& inStream);
-    //void broadcastCompressed(MessageID inMsgId, std::ostringstream const& inStream);
-    //void broadcastCompressed(MessageID inMsgId, std::string const& inStream);
-
-    void send(Player& inPlayer, Event* inEvt);
-    //void send(Player& inPlayer, BitStream const& inEvt);
-
-		void rejectRequest(Event* inEvt);
-
-		const int generateUID();
-
-		/*! \brief
-		 *	convenience method for retrieving the puppet of the event sender
-		 *
-		 *	it uses the guid tracked in the server for matching against the
-		 *	players tracked here, and then getting the attached puppet
-		 */
-		Puppet* getSender(Event* inEvt);
-
-    bool operator==(Instance const& rhs);
+		player_cptr get_sender(const Event& inEvt);
 
 	protected:
 
-		void initLua();
+		void init_lua();
 
 		/*! \brief
 		 *	returns true when both players notified that they're ready by sending
 		 *	"Ready" event
 		 */
-		bool hasStarted();
+		bool has_started();
+
+		/*! \brief
+		 *	generates X spells from the puppet's deck, inserts them
+		 *	into its hand, and sends the newly drawn spells to the puppet
+     *
+     * if inPuppet was not passed, the active puppet is assumed to be chosen
+		 */
+		void draw_spells(Puppet* inPuppet = 0, int inNrOfSpells = 2);
 
 		/* +-+-+-+-+-+-+-+ *
 		 * EVENT HANNDLERS *
@@ -108,20 +125,14 @@ namespace Net {
 		 *	once both players send this message, teh game will start by
 		 *	sending event "StartTurn"
 		 */
-		bool evtPlayerReady(Event* inEvt);
-
-		/*! \brief
-		 *	generates X spells from the puppet's deck, inserts them
-		 *	into its hand, and sends the newly drawn spells to the puppet
-		 */
-		void drawSpells(Puppet* inPuppet = 0, int inNrOfSpells = 2);
+		bool on_player_ready(const Event& inEvt);
 
     /*
      * Once this event is received, it means the puppet received the StartTurn
      * order and has started their local timer. Here we begin the turn timer
      * and broadcast to all players that this puppet's turn has started.
      */
-    bool evtStartTurn(Event* inEvt);
+    bool on_start_turn(const Event& inEvt);
 
     /*
      * acknowledges player's request to end their turn, checks whether the
@@ -129,43 +140,45 @@ namespace Net {
      * blocking phase. If sender is not charging, send StartTurn to opponent
      * puppet and wait for ack.
      */
-    bool evtEndTurn(Event* inEvt);
+    bool on_end_turn(const Event& inEvt);
 
-		bool evtCastSpell(Event* inEvt);
+		bool on_cast_spell(const Event& inEvt);
 
-		log4cpp::Category	*mLog;
-		Server				*mServer;
-		EventManager		*mEvtMgr;
-		lua_State			*mLua;
-		log4cpp::Category	*mLuaLog;
+		log4cpp::Category	*log_;
+		//Server				*mServer;
+		//EventManager		*mEvtMgr;
+		lua_State			*lua_;
+		log4cpp::Category	*lua_log_;
 
 		//int	mId; /*! my unique id in the cluster */
-    boost::uuids::uuid mUUID;
-		players_t	mPlayers; //! my subscribed players
-		puppets_t	mPuppets; //! and their puppets
-    spells_t mSpells;
-    units_t mUnits;
+    boost::uuids::uuid uuid_;
+		players_t	players_; //! my subscribed players
+		puppets_t	puppets_; //! and their puppets
+    spells_t spells_;
+    units_t units_;
 
-		bool		fStarted; //! are the players ready?
-		int			nrPlayersReady; //! how many players are ready?
-		Puppet		*mActivePuppet; //! the puppet whose turn is active
-		Player		*mActivePlayer;
+		bool		started_; //! are the players ready?
+		int			nr_ready_players_; //! how many players are ready?
+		Puppet		*active_puppet_; //! the puppet whose turn is active
+		player_cptr		active_player_; //! owner of the active puppet
 
-		int	mUIDGenerator; //! assigns ids to all entities
-		int	nrSpellsPerTurn;
+		int	uid_generator_; //! assigns ids to all entities
+
+    typedef std::map< const Event*, player_cptr > player_events_t;
+    player_events_t player_events_;
 
 	private:
 
 		/*! \brief
-		 *	"subscribes" a player as a participant in this Instance, subscribed
-		 *	players will receive events from this Instance
+		 *	"subscribes" a player as a participant in this instance, subscribed
+		 *	players will receive events from this instance
 		 */
-		void subscribe(Player* inPlayer);
+		void subscribe(player_cptr);
 
 		/*!	\brief
 		 *	registers event callback handlers
 		 */
-		void bindHandlers();
+		void bind_handlers();
 
 		/*! \brief
 		 *	sends to each player an event named "AssignPuppets" that contains
@@ -182,17 +195,19 @@ namespace Net {
 		 *	transmits puppet info to all players so that they can create and
 		 *	render them
 		 */
-		void createPuppets();
+		void create_puppets();
 
-    Puppet* getPuppet(int inUID);
-    Spell* getSpell(int inUID);
-    Unit* getUnit(int inUID);
-    Player* getPlayer(Puppet const* inPuppet);
+    Puppet* get_puppet(int inUID);
+    Spell* get_spell(int inUID);
+    Unit* get_unit(int inUID);
+    player_cptr get_player(Puppet const* inPuppet);
 
-    std::ostringstream mDrawnSpells;
+    std::ostringstream drawn_spells_;
     //BitStream mStream;
 
 	};
+
+  typedef boost::shared_ptr<instance> instance_ptr;
 }
 }
 #endif

@@ -1,5 +1,6 @@
 #include "sresource_manager.hpp"
 #include "server.hpp"
+#include "db_manager.hpp"
 
 using std::vector;
 using std::string;
@@ -279,7 +280,7 @@ namespace Net {
   }
 #endif
 
-  void sresource_manager::puppetsToStream(std::ostringstream& out, const list<Puppet const*>& inPuppets) {
+  void sresource_manager::puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets) {
     std::ostringstream lDeckStream;
     int nrDecks = 0;
 
@@ -290,7 +291,7 @@ namespace Net {
       Puppet const& inPuppet = *(*lPuppet);
       out
         << "$" << inPuppet.getName() << ";"
-        << inPuppet.getObjectId() << ";"
+        << inPuppet.getUID() << ";"
         << inPuppet.getRace() << ";"
         << inPuppet.getLevel() << ";"
         << inPuppet.getIntelligence() << ";"
@@ -335,8 +336,8 @@ namespace Net {
     out << "/elementum/";
   }
 
-  void sresource_manager::_assignTalents(Puppet& inPuppet, std::string inTalents) {
-   // mLog->debugStream() << "assigning talents to puppet " << inPuppet.getName() << ": " << inTalents;
+  void sresource_manager::_assign_talents(Puppet& inPuppet, std::string inTalents) {
+    mLog->debugStream() << "assigning talents to puppet " << inPuppet.getName() << ": " << inTalents;
 
     inTalents = inTalents.erase(0,1).erase(inTalents.size()-2,1); // remove { }
     vector<string> names = Utility::split(inTalents,',');
@@ -351,7 +352,7 @@ namespace Net {
   void sresource_manager::talentToStream(std::ostringstream& out, const Talent& inTalent) {
   }
 
-  void sresource_manager::_assignDeck(Puppet& inPuppet, string inName, string inSpells, int inUseCount) {
+  void sresource_manager::_assign_deck(Puppet& inPuppet, string inName, string inSpells, int inUseCount) {
     Deck* lDeck = new Deck(&inPuppet);
     lDeck->setName(inName);
     lDeck->setUseCount(inUseCount);

@@ -38,6 +38,7 @@ void message_handler::deliver(const Event& evt) {
   events.push_back(Event(evt));
 
   strand_.post( boost::bind( &message_handler::dispatch, this ) );
+
 }
 
 void message_handler::dispatch() {

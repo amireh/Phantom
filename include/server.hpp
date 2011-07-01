@@ -45,10 +45,11 @@
 #include "binreloc/binreloc.h"
 #include "PixyShared.h"
 #include "event.hpp"
-#include "server_connection.hpp"
-#include "db_manager.hpp"
+//#include "server_connection.hpp"
+//#include "db_manager.hpp"
 #include "sresource_manager.hpp"
 #include "match_finder.hpp"
+#include "instance.hpp"
 
 // LOGGER
 #include "log4cpp/Category.hh"
@@ -59,6 +60,10 @@
 namespace Pixy {
 namespace Net {
 
+  class connection;
+  typedef boost::shared_ptr<connection> connection_ptr;
+
+  class db_manager;
   /// The top-level class of the HTTP server.
   class server : private boost::noncopyable
   {
@@ -86,12 +91,14 @@ namespace Net {
   protected:
     // connection can mark itself as dead by calling _close()
     friend class connection;
+    friend class instance;
     friend class match_finder;
 
     // marks the connection as dead and will be removed sometime later
     // @note: called by the connection itself when it needs to shutdown
     void _close(connection_ptr);
 
+    void _shutdown_instance(instance_ptr);
     void _launch_instance(std::list<player_cptr>);
 
   private:
@@ -149,6 +156,9 @@ namespace Net {
     db_manager* dbmgr_;
     sresource_manager *resmgr_;
     match_finder *match_finder_;
+
+    instance_ptr new_instance_;
+     std::list<instance_ptr> instances_;
 
     static server* __instance;
 

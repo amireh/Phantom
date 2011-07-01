@@ -225,7 +225,7 @@ namespace Net {
     global_stream_lock.lock();
     std::cout << in.size() << " bytes left\n";
     global_stream_lock.unlock();
-    assert(in.size() == Event::FooterLength);
+    //assert(in.size() == Event::FooterLength);
     in.consume(Event::FooterLength);
 
     //this->dump();

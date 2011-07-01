@@ -63,6 +63,7 @@ namespace Net {
 
     // set KEEPALIVE to true
     socket_.set_option(boost::asio::socket_base::keep_alive(true));
+    socket_.set_option(boost::asio::ip::tcp::no_delay(true));
     std::cout << "connected!\n";
 
     return connected_;

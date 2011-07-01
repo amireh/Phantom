@@ -22,7 +22,9 @@
  */
 
 #include "server.hpp"
+#include "server_connection.hpp"
 #include "db_manager.hpp"
+#include "instance.hpp"
 
 namespace Pixy {
 namespace Net {
@@ -49,10 +51,23 @@ server::server()
   acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
   acceptor_.bind(endpoint);
   acceptor_.listen();
-  acceptor_.async_accept(new_connection_->socket(),
+  /*acceptor_.async_accept(new_connection_->socket(),
       boost::bind(&server::handle_accept, this,
-        boost::asio::placeholders::error));
+        boost::asio::placeholders::error));*/
+  acceptor_.async_accept(
+    new_connection_->socket(),
+    [&](const boost::system::error_code& e) {
+      if (!e)
+      {
+        connections.push_back(new_connection_);
 
+        new_connection_->start();
+        new_connection_.reset(new connection(io_service_));
+        acceptor_.async_accept(new_connection_->socket(),
+            boost::bind(&server::handle_accept, this,
+              boost::asio::placeholders::error));
+      }
+    });
 
 }
 
@@ -233,15 +248,12 @@ void server::cleanup() {
 }
 
 void server::_close(connection_ptr conn) {
-  strand_.post( boost::bind(&server::mark_dead, this, conn) );
+  //strand_.post( boost::bind(&server::mark_dead, this, conn) );
+  strand_.post( [&, conn]() { connections.remove(conn); });
   //mark_dead(conn);
   //conn->stop();
 }
 
-void server::mark_dead(connection_ptr conn) {
-  connections.remove(conn);
-  //dead_connections.push_back(conn);
-}
 
 void server::ping_clients(const boost::system::error_code& error) {
   //if (!dead_connections.empty())
@@ -276,6 +288,15 @@ match_finder& server::get_match_finder() {
 }
 void server::_launch_instance(std::list<player_cptr> players) {
   std::cout << "starting an instance\n";
+  strand_.post( [&, players]() -> void {
+    new_instance_.reset(new instance(players));
+    new_instance_->bootstrap();
+    instances_.push_back(new_instance_);
+    new_instance_.reset();
+  });
+}
+void server::_shutdown_instance(instance_ptr in_instance) {
+  strand_.post( [&, in_instance] { instances_.remove(in_instance); } );
 }
 
 } // namespace Net

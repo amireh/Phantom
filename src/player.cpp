@@ -17,7 +17,7 @@ namespace Net {
   : username_(username),
     conn_(conn),
     puppet_(0),
-    instance_(0),
+    instance_(),
     online_(false)
   {
 		std::cout << "Player is alive!\n";
@@ -28,12 +28,12 @@ namespace Net {
       delete puppet_;
 
 		puppet_ = 0;
-    instance_ = 0;
+    //instance_.reset();
     conn_ = 0;
 		std::cout << "Player is destroyed!\n";
 	}
 
-	void Player::set_instance(Instance* inInstance) {
+	void Player::set_instance(instance_ptr inInstance) {
 		instance_ = inInstance;
 	}
 
@@ -56,7 +56,7 @@ namespace Net {
 	string const& Player::get_username() const {
 		return username_;
 	}
-	Instance* Player::get_instance() const {
+	instance_ptr Player::get_instance() const {
 		return instance_;
 	}
 

@@ -1,0 +1,8 @@
+$#include "instance.hpp"
+$#include "player.hpp"
+
+class instance {
+
+  void instance::lua_log @ Log(std::string inMsg);
+
+}

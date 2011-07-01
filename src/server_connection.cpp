@@ -44,6 +44,7 @@ namespace Net {
 
       if (player_->get_instance()) {
         // notify instance that player is going down
+        player_->get_instance()->on_dropout(player_);
       }
 
       // log out from DB

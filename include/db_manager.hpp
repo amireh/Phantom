@@ -19,6 +19,7 @@
 #include "pqxx/transactor.hxx"
 //#include "md5/md5.hh"
 #include "Puppet.h"
+#include "server.hpp"
 #include "player.hpp"
 #include "PixyUtility.h"
 
@@ -193,7 +194,7 @@ namespace Net {
     template <typename Callback>
     void do_load_puppet(std::string inProfileName, Puppet& inPuppet, boost::tuple<Callback> callback)
     {
-#if 0 // __DISABLED__ waiting until server & res mgr are migrated to new API
+//#if 0 // __DISABLED__ waiting until server & res mgr are migrated to new API
       //pqxx::result result_;
       std::ostringstream _condition;
       _condition << "puppets.name=" << escape(inProfileName);
@@ -207,7 +208,7 @@ namespace Net {
       inPuppet.setLevel(convertTo<int>(result_[0]["level"].c_str()));
       inPuppet.setIntelligence(convertTo<int>(result_[0]["intelligence"].c_str()));
       inPuppet.setVitality(convertTo<int>(result_[0]["vitality"].c_str()));
-      Server::getSingleton().getResMgr()._assignTalents(inPuppet, result_[0]["talents"].c_str());
+      server::singleton().get_resmgr()._assign_talents(inPuppet, result_[0]["talents"].c_str());
 
       // get the decks
       result_.clear();
@@ -216,13 +217,13 @@ namespace Net {
       get_records(result_, "decks", "name,spells,use_count", _condition.str().c_str());
       pqxx::result::const_iterator lDeck;
       for (lDeck = result_.begin(); lDeck != result_.end(); ++lDeck) {
-        Server::getSingleton().getResMgr()._assignDeck(
+        server::singleton().get_resmgr()._assign_deck(
           inPuppet,
           (*lDeck)["name"].c_str(),
           (*lDeck)["spells"].c_str(),
           convertTo<int>((*lDeck)["use_count"].c_str()));
       }
-#endif
+//#endif
 
       boost::get<0>(callback)(db_result::Ok);
     }

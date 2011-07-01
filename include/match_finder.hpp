@@ -13,7 +13,7 @@
 #include <boost/asio.hpp>
 #include "PixyLog.h"
 #include "player.hpp"
-#include "instance.hpp"
+//#include "instance.hpp"
 
 #include <list>
 

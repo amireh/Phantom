@@ -49,6 +49,8 @@ message_handler& base_connection::get_message_handler() {
 }
 
 void base_connection::start() {
+  boost::asio::ip::tcp::no_delay option(true);
+  socket_.set_option(option);
   read();
 }
 
@@ -111,16 +113,20 @@ void base_connection::handle_read_all(
   std::size_t bytes_transferred)
 {
   if (!e) {
-    bool result = inbound.fromStream(request_);
-    if (result) {
-      request_.consume(bytes_transferred);
-      // message is ready for dispatching
-      message_handler_.deliver(inbound);
+    while (!request_.size() == 0) {
+      bool result = inbound.fromStream(request_);
+      if (result) {
+        request_.consume(bytes_transferred);
+        // message is ready for dispatching
+        message_handler_.deliver(inbound);
 
-      // read next message
-      strand_.post( boost::bind(&base_connection::read, shared_from_this()) );
-    } else {
-      stop();
+        // read next message
+        read();
+        //strand_.post( boost::bind(&base_connection::read, shared_from_this()) );
+      } else {
+        stop();
+        break;
+      }
     }
 
   } else
@@ -224,7 +230,7 @@ void base_connection::send(const Event& evt) {
 }
 void base_connection::do_send(const Event& evt) {
 
-  //std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
+  std::cout << "outbound buffer has " << response_.size() << "bytes (expected 0)";
 
   boost::system::error_code ec;
 
@@ -234,6 +240,7 @@ void base_connection::do_send(const Event& evt) {
   outbound.toStream(response_);
 
   size_t n = boost::asio::write(socket_, response_.data(), boost::asio::transfer_all(), ec);
+  std::cout << "sent data, buffer now has " << response_.size() << "\n";
   /*this->async_write(outbound,
           boost::bind(&base_connection::handle_write, shared_from_this(),
             boost::asio::placeholders::error));*/

@@ -20,7 +20,10 @@ namespace Net {
 
   class server;
   class connection;
-  class Instance;
+  class instance;
+
+  typedef boost::shared_ptr<instance> instance_ptr;
+
 	class Player {
 	public:
 		Player(connection*, std::string username);
@@ -28,9 +31,7 @@ namespace Net {
     Player(const Player&) = delete;
     Player& operator=(const Player&) = delete;
 
-
-
-    Instance* get_instance() const;
+    instance_ptr get_instance() const;
 		Puppet* get_puppet() const;
 		std::string const& get_puppet_name() const;
 		std::string const& get_username() const;
@@ -41,17 +42,18 @@ namespace Net {
 	protected:
     friend class connection;
     friend class server;
+    friend class instance;
 
     /// name of the puppet the player joined the queue with
 		void set_puppet(Puppet* inPuppet);
-		void set_instance(Instance*);
+		void set_instance(instance_ptr);
     void set_connection(connection*);
     void set_online(bool);
 
   private:
     connection* conn_;
 		string username_;
-    Instance* instance_;
+    instance_ptr instance_;
 		Puppet* puppet_;
 		string puppet_name_;
     bool online_;

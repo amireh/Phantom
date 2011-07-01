@@ -16,7 +16,7 @@
 #include "PixyUtility.h"
 
 #include "player.hpp"
-#include "db_manager.hpp"
+//#include "db_manager.hpp"
 
 //~ #include "BitStream.h"
 //~ #include "RakString.h"
@@ -38,6 +38,7 @@ using std::string;
 namespace Pixy {
 namespace Net {
 
+  class db_manager;
 	class sresource_manager : public ResourceManager {
     public:
       sresource_manager();
@@ -55,12 +56,13 @@ namespace Net {
 
       //~ void puppetToStream(BitStream& out, const Puppet& inPuppet);
       //~ void puppetsToStream(BitStream& out, const list<Puppet const*>& inPuppets);
+      void puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets);
 
     protected:
       friend class db_manager;
 
-      void _assignTalents(Puppet& inPuppet, string inTalents);
-      void _assignDeck(Puppet& inPuppet, string inName, string inSpells, int inUseCount);
+      void _assign_talents(Puppet& inPuppet, string inTalents);
+      void _assign_deck(Puppet& inPuppet, string inName, string inSpells, int inUseCount);
 
       //~ Spell* getModelSpell(std::string inName);
       //~ Unit* getModelUnit(std::string inName);
@@ -74,7 +76,7 @@ namespace Net {
 
       void talentToStream(std::ostringstream& out, const Talent& inTalent);
       //void puppetToStream(std::ostringstream& out, Puppet const& inPuppet);
-      void puppetsToStream(std::ostringstream& out, const list<Puppet const*>& inPuppets);
+
 
       //log4cpp::Category	*mLog;
 

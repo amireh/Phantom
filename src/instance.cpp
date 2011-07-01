@@ -1,5 +1,5 @@
 /*
- *  Instance.cpp
+ *  instance.cpp
  *  Elementum
  *
  *  Created by Ahmad Amireh on 5/29/10.
@@ -8,241 +8,197 @@
  */
 
 #include "instance.hpp"
-#include "Server.h"
+#include "server.hpp"
 
 #include "tolua++.h"
 
 TOLUA_API int  tolua_EServer_open (lua_State* tolua_S);
 TOLUA_API int  tolua_EShared_open (lua_State* tolua_S);
 namespace Pixy {
+namespace Net {
 
+	instance::instance(players_t in_players) {
+		uuid_ = boost::uuids::random_generator()();
 
-	Instance::Instance(std::list<Player*> inPlayers) {
-		mUUID = boost::uuids::random_generator()();
+		started_ = false;
+		nr_ready_players_ = 0;
+		//nrSpellsPerTurn = 2;
+		uid_generator_ = 0;
 
-		fStarted = false;
-		nrPlayersReady = 0;
-		nrSpellsPerTurn = 2;
-		mUIDGenerator = 0;
+		active_player_.reset();
+    active_puppet_ = 0;
 
-		mActivePlayer = 0;
-    mActivePuppet = 0;
+    lua_ = 0;
 
-    mLua = 0;
-
-		mLog = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "Instance");
-		mLuaLog = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "Lua");
-
-		mServer = Server::getSingletonPtr();
-		mEvtMgr = EventManager::getSingletonPtr();
+		log_ = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "instance");
+		lua_log_ = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "Lua");
 
 		// register our players
-    list<Player*>::const_iterator itr;
-    for (itr = inPlayers.begin(); itr != inPlayers.end(); ++itr)
-      subscribe(*itr);
+    for (auto player : in_players)
+      players_.push_back(player);
+	}
 
-		//initLua();
+	instance::~instance() {
 
-		bindHandlers();
+
+		puppets_.clear();
+
+		if (lua_)
+			lua_close(lua_);
+
+		log_->infoStream() << "instance shut down";
+		if (lua_log_) {
+			delete lua_log_;
+	  }
+		if (log_) {
+			delete log_;
+    }
+
+    active_player_.reset();
+    active_puppet_ = 0;
+	}
+
+  bool instance::operator==(instance const& rhs) {
+    return (uuid_ == rhs.uuid_);
+  }
+
+  void instance::bootstrap() {
+    for (auto player : players_)
+      subscribe(player);
+
+		//init_lua();
+
+		bind_handlers();
 
 		// give them the puppets so they can populate them
-		createPuppets();
+		create_puppets();
 
-		mLog->infoStream() << "a match is beginning";
-	}
-
-	Instance::~Instance() {
-    while (!mPlayers.empty()) {
-			mLog->infoStream()
-			<< "detaching player "
-			<< mPlayers.back()->getUsername()
-			<< " from instance";
-      delete mPlayers.back()->getPuppet();
-      mPlayers.back()->setPuppet(0);
-      mPlayers.back()->setInstance(0);
-      mPlayers.pop_back();
-    }
-
-		mPuppets.clear();
-
-		if (mLua)
-			lua_close(mLua);
-
-		mLog->infoStream() << "instance shut down";
-		if (mLuaLog) {
-			delete mLuaLog;
-	  }
-		if (mLog) {
-			delete mLog;
-    }
-
-    mActivePlayer = 0;
-    mActivePuppet = 0;
-	}
-
-  bool Instance::operator==(Instance const& rhs) {
-    return (mUUID == rhs.mUUID);
+		log_->infoStream() << "a match is beginning";
   }
+
+
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Lua
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-	void Instance::initLua() {
-		mLog->infoStream() << "opening Lua state";
+	void instance::init_lua() {
+		log_->infoStream() << "opening Lua state";
 		// init lua state
-		mLua = lua_open();
+		lua_ = lua_open();
 
-		luaL_openlibs(mLua);
-		tolua_EServer_open(mLua);
-    tolua_EShared_open(mLua);
+		luaL_openlibs(lua_);
+		tolua_EServer_open(lua_);
+    tolua_EShared_open(lua_);
 
 		//char lFilePath[PATH_MAX];
 		//sprintf(lFilePath,  "%s%s/server/pixy_server.lua", PROJECT_ROOT, PROJECT_SCRIPTS );
 		std::string lFilePath = "../resources/scripts/pixy_server.lua";
 
-		mLog->infoStream() << "using script '" << lFilePath << "'";
+		log_->infoStream() << "using script '" << lFilePath << "'";
 
-		int lErrorCode = luaL_dofile(mLua, lFilePath.c_str());
+		int lErrorCode = luaL_dofile(lua_, lFilePath.c_str());
 		if (lErrorCode == 1) {
-			mLog->errorStream() << "Lua: " << lua_tostring(mLua, -1);
-			lua_pop(mLua, -1);
+			log_->errorStream() << "Lua: " << lua_tostring(lua_, -1);
+			lua_pop(lua_, -1);
 		}
 
 		// give Lua a handle of this instance
-		lua_getfield(mLua, LUA_GLOBALSINDEX, "registerInstance");
-		if(!lua_isfunction(mLua, 1))
+		lua_getfield(lua_, LUA_GLOBALSINDEX, "registerinstance");
+		if(!lua_isfunction(lua_, 1))
 		{
-			mLog->errorStream() << "could not find Lua event processor!";
-			lua_pop(mLua,1);
+			log_->errorStream() << "could not find Lua event processor!";
+			lua_pop(lua_,1);
 			return;
 		}
 
-		tolua_pushusertype(mLua,(void*)this,"Pixy::Instance");
+		tolua_pushusertype(lua_,(void*)this,"Pixy::instance");
 		try {
-			lua_call(mLua, 1, 1);
+			lua_call(lua_, 1, 1);
 		} catch (std::exception& e) {
-			mLog->errorStream() << "Lua Handler: " << e.what();
+			log_->errorStream() << "Lua Handler: " << e.what();
 		}
 
-		lua_toboolean(mLua, lua_gettop(mLua));
-		lua_remove(mLua, lua_gettop(mLua));
+		lua_toboolean(lua_, lua_gettop(lua_));
+		lua_remove(lua_, lua_gettop(lua_));
 
-		mLog->infoStream() << "Lua is up!";
+		log_->infoStream() << "Lua is up!";
 	}
 
-	void Instance::luaLog(std::string inMsg) {
-		mLuaLog->infoStream() << inMsg;
+	void instance::lua_log(std::string inMsg) {
+		lua_log_->infoStream() << inMsg;
 	}
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Misc
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-	boost::uuids::uuid Instance::getUUID() const {
-		return mUUID;
+	boost::uuids::uuid instance::get_uuid() const {
+		return uuid_;
 	}
 
-	bool Instance::hasStarted() {
-		return fStarted;
+	bool instance::has_started() {
+		return started_;
 	}
 
-	players_t const& Instance::getPlayers() const {
-		return mPlayers;
-	}
+	/*players_t const& instance::get_players() const {
+		return players_;
+	}*/
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Helpers
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-	Puppet* Instance::getSender(Event* inEvt) {
-		Player* lPlayer = mServer->getPlayer(inEvt->getSender());// mServer->getEventSender(inEvt);
-		if (!lPlayer) {
-			throw UnknownEventSender( "in Instance::getSender" );
-			return false;
-		}
+	player_cptr instance::get_sender(const Event& evt) {
+    player_events_t::const_iterator itr = player_events_.find(&evt);
+    if (itr != player_events_.end())
+      return itr->second;
 
-    //inEvt->addHandler();
-
-		/*
-		 players_t::iterator lSeeker = mPlayers.begin();
-		for (lSeeker; lSeeker != mPlayers.end(); ++lSeeker)
-			if (*lSeeker == lPlayer)
-				return lPlayer->getPuppet();
-		*/
-		if (!lPlayer || !lPlayer->getPuppet())
-			throw new UnknownEventSender("Instance couldn't find event's player!");
-
-		//inEvt->removeHandler();
-		return lPlayer->getPuppet();
+    throw UnknownEventSender( std::string("in instance::get_sender: " + stringify((int)evt.UID)) );
 	}
 
-  Puppet* Instance::getPuppet(int inUID) {
+  Puppet* instance::get_puppet(int inUID) {
     puppets_t::const_iterator lPuppet;
-    for (lPuppet = mPuppets.begin(); lPuppet != mPuppets.end(); ++lPuppet)
-      if ((*lPuppet)->getObjectId() == inUID)
+    for (lPuppet = puppets_.begin(); lPuppet != puppets_.end(); ++lPuppet)
+      if ((*lPuppet)->getUID() == inUID)
         return (*lPuppet);
 
     return 0;
   }
 
-  Spell* Instance::getSpell(int inUID) {
-    return mSpells.find(inUID)->second;
+  Spell* instance::get_spell(int inUID) {
+    return spells_.find(inUID)->second;
   }
 
-  Unit* Instance::getUnit(int inUID) {
-    return mUnits.find(inUID)->second;
+  Unit* instance::get_unit(int inUID) {
+    return units_.find(inUID)->second;
   }
 
-  Player* Instance::getPlayer(Puppet const *inPuppet) {
-		players_t::const_iterator lPlayer;
-		for (lPlayer = mPlayers.begin(); lPlayer != mPlayers.end(); ++lPlayer) {
-			if ((*lPlayer)->getPuppet() == inPuppet)
-        return (*lPlayer);
-		}
+  player_cptr instance::get_player(Puppet const *inPuppet) {
+    for (auto player : players_)
+      if (player->get_puppet()->getUID() == inPuppet->getUID())
+        return player;
 
-    return 0;
+    assert(false); // shouldnt be here
   }
 
-	void Instance::broadcast(Event* inEvt, bool fForceResp) {
-		players_t::iterator lPlayer = mPlayers.begin();
-
-		if (fForceResp)
-			inEvt->setType(EVT_RESP);
-
-		for (lPlayer; lPlayer != mPlayers.end(); ++lPlayer) {
-			mServer->sendToPlayer(inEvt, *lPlayer);
-		}
-
-    inEvt->removeHandler();
-
+	void instance::broadcast(const Event& evt) {
+    for (auto player : players_)
+      send(player, evt);
 	}
 
-	void Instance::broadcast(BitStream const& inStream) {
-		players_t::const_iterator lPlayer;
-		for (lPlayer = mPlayers.begin(); lPlayer != mPlayers.end(); ++lPlayer) {
-			mServer->sendToPlayer(inStream, *lPlayer);
-		}
-	}
-
-  void Instance::send(Player& inPlayer, Event* inEvt) {
-		inEvt->setType(EVT_RESP);
-		mServer->sendToPlayer(inEvt, &inPlayer);
-    inEvt->removeHandler();
+  void instance::send(player_cptr player, const Event& evt) {
+    player->send(evt);
   }
 
-  void Instance::send(Player& inPlayer, BitStream const& inStream) {
-		mServer->sendToPlayer(inStream, &inPlayer);
-  }
-
-	void Instance::rejectRequest(Event* inEvt) {
-		inEvt->setFeedback(EVT_ERROR);
-		mServer->sendToPlayer(inEvt);
-    inEvt->removeHandler();
+	void instance::reject(Event& evt) {
+		evt.Feedback = EventFeedback::InvalidRequest;
+		send(get_sender(evt), evt);
 	}
 
+#if 0 // __DISABLED__ no longer using BitStream / RakNet
   void
-  Instance::broadcastCompressed(
+  instance::broadcastCompressed(
     MessageID inMsgId,
     std::ostringstream const& raw)
   {
@@ -250,7 +206,7 @@ namespace Pixy {
   }
 
   void
-  Instance::broadcastCompressed(
+  instance::broadcastCompressed(
     MessageID inMsgId,
     std::string const& raw)
   {
@@ -283,126 +239,115 @@ namespace Pixy {
     broadcast(mStream);
   }
 
+#endif
+
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Bootstrap
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-	void Instance::bindHandlers() {
-		bindToName("Ready", this, &Instance::evtPlayerReady);
-    bindToName("StartTurn", this, &Instance::evtStartTurn);
-    bindToName("EndTurn", this, &Instance::evtEndTurn);
-		bindToName("CastSpell", this, &Instance::evtCastSpell);
+	void instance::bind_handlers() {
+		//bindToName("Ready", this, &instance::on_player_ready);
+    //bindToName("StartTurn", this, &instance::on_start_turn);
+    //bindToName("EndTurn", this, &instance::on_end_turn);
+		//bindToName("CastSpell", this, &instance::on_cast_spell);
 	}
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Main Routines
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-	void Instance::start() {
+	void instance::start() {
 
-		mLog->debugStream() << "players are ready, starting turn";
+		log_->debugStream() << "players are ready, starting turn";
 
     // start the first player's turn, and track them
-		mActivePuppet = mPuppets.front();
-    mActivePlayer = getPlayer(mActivePuppet);
-		Event* lEvt = mEvtMgr->createEvt("StartTurn");
-		send(*mActivePlayer, lEvt);
+		active_puppet_ = puppets_.front();
+    active_player_ = get_player(active_puppet_);
+		Event evt(EventUID::StartTurn);
+		send(active_player_, evt);
 
-    puppets_t::const_iterator itr;
-    for (itr = mPuppets.begin(); itr != mPuppets.end(); ++itr)
-      this->drawSpells(*itr, 4);
+    for (auto puppet : puppets_)
+      draw_spells(puppet, 4);
 
-
-		fStarted = true;
+		started_ = true;
 	}
 
-	void Instance::end() {
-	}
 
-	bool Instance::update() {
-		return processEvents();
-	}
-
-	void Instance::subscribe(Player* inPlayer) {
+	void instance::subscribe(player_cptr player) {
 
 		// validate player before hooking them
-		if (!inPlayer) {
-			mLog->warnStream()
-			<< "an invalid player attempted to join the instance";
+		if (!player->is_online()) {
+			log_->warnStream()
+			<< "an offline player attempted to join the instance";
 
-			return;
+			throw std::runtime_error("an offline player attempted to join the instance");
 		}
 
-		mPlayers.push_back(inPlayer);
+		//players_.push_back(player);
 
-		// assert profile name existence
-		if (inPlayer->getPuppetName().empty()) {
-			std::ostringstream lMsg;
-			lMsg
-				<< "Player '"
-				<< inPlayer->getUsername()
-				<< "' has no profile selected!";
-			throw UnassignedProfile(lMsg.str());
-		}
+    player->get_puppet()->setUID(generate_uid());
+    player->get_puppet()->live();
 
-		// load the puppet
-		Puppet* lPuppet = mServer->getResMgr().getPuppet(inPlayer, inPlayer->getPuppetName().c_str());
-		if (!lPuppet) {
-			throw BadEvent(std::string("unknown puppet named: ") + inPlayer->getPuppetName());
-		}
-    lPuppet->setObjectId(generateUID());
-    lPuppet->live();
-
-		inPlayer->setPuppet(lPuppet);
-
-		mPuppets.push_back(inPlayer->getPuppet());
-		lPuppet = 0;
+		puppets_.push_back(player->get_puppet());
 
 		// attach them to this instance
-		inPlayer->setInstance(this);
+		((Player*)player.get())->set_instance(shared_from_this());
 
-		mLog->debugStream()
+		log_->debugStream()
 		<< "a puppet named "
-		<< mPlayers.back()->getPuppet()->getName()
+		<< player->get_puppet()->getName()
 		<< " has joined the instance";
 	}
 
-	void Instance::createPuppets() {
+	void instance::create_puppets() {
 		// send profile info for players so they create the puppets
-    mLog->infoStream() << "sending puppets data to clients";
+    log_->infoStream() << "sending puppets data to clients";
 
-    BitStream lStream;
     list<Puppet const*> lPuppets;
-    for (puppets_t::const_iterator itr = mPuppets.begin(); itr != mPuppets.end(); ++itr)
-      lPuppets.push_back(*itr);
+    for (const Puppet* puppet : puppets_)
+      lPuppets.push_back(puppet);
 
-    mServer->getResMgr().puppetsToStream(lStream, lPuppets);
-
-    broadcast(lStream);
+    std::ostringstream stream;
+    server::singleton().get_resmgr().puppets_to_stream(stream, lPuppets);
+    Event evt(EventUID::SyncPuppetData, EventFeedback::Ok, Event::NoFormat);
+    evt.setProperty("Data", stream.str());
+    broadcast(evt);
 	}
 
-	const int Instance::generateUID() {
-	  return ++mUIDGenerator;
+	const int instance::generate_uid() {
+	  return ++uid_generator_;
 	}
 
-  void Instance::handlePlayerDisconnected(Player* inPlayer) {
-    mServer->addToShutdownQueue(this);
+  void instance::on_dropout(player_cptr player) {
+    // once the players stop referencing this instance object, it will be destroyed
+    while (!players_.empty()) {
+			log_->infoStream()
+			<< "detaching player "
+			<< players_.back()->get_username()
+			<< " from instance";
+      //delete players_.back()->get_puppet();
+      //players_.back()->setPuppet(0);
+      players_.back()->get_instance().reset();
+      players_.pop_back();
+    }
+
+    server::singleton()._shutdown_instance(shared_from_this());
   }
 
   /*
    * format:
    * $owner-uid;nr-spells;spell1-name;spell1-uid;spell2-name;spell2-uid;...;\n
    */
-	void Instance::drawSpells(Puppet* inPuppet, int inNrOfSpells) {
+	void instance::draw_spells(Puppet* inPuppet, int inNrOfSpells) {
 
     if (!inPuppet)
-      inPuppet = mActivePuppet;
+      inPuppet = active_puppet_;
 
     const int mMaxSpellsInHand = 6;
 
-    mDrawnSpells.str("");
-    mDrawnSpells << "[draw];" << inNrOfSpells << "\n";
-    mDrawnSpells << "$" << inPuppet->getObjectId() << ";";
+    drawn_spells_.str("");
+    drawn_spells_ << "[draw];" << inNrOfSpells << "\n";
+    drawn_spells_ << "$" << inPuppet->getUID() << ";";
 
 		// create nrSpellsPerTurn spells from the hero's deck
 		Deck* lDeck = inPuppet->getDeck();
@@ -411,84 +356,77 @@ namespace Pixy {
 		for (i=0; i< inNrOfSpells; ++i) {
 			Spell* lSpell = lDeck->drawSpell();
 			// assign UID and attach to puppet
-			lSpell->setUID(generateUID());
+			lSpell->setUID(generate_uid());
 			inPuppet->attachSpell(lSpell);
 
-      mDrawnSpells << lSpell->getName() << ";" << lSpell->getUID() << ";";
+      drawn_spells_ << lSpell->getName() << ";" << lSpell->getUID() << ";";
       lSpell = 0;
 		}
 
-    mDrawnSpells << "\n";
+    drawn_spells_ << "\n";
 
     // tell it to drop some spells if its hand is overflown
-    mDrawnSpells << "[drop];";
+    drawn_spells_ << "[drop];";
     int nrOverflow = inPuppet->nrSpellsInHand() - mMaxSpellsInHand;
     std::cout << "Puppet has " << inPuppet->nrSpellsInHand() << " spells in hand, an overflow of= " << nrOverflow << "\n";
     if (nrOverflow > 0) {
-      mDrawnSpells << nrOverflow << "\n$" << inPuppet->getObjectId() << ";";
+      drawn_spells_ << nrOverflow << "\n$" << inPuppet->getUID() << ";";
     } else
-      mDrawnSpells << 0;
+      drawn_spells_ << 0;
 
     Puppet::hand_t const& lHand = inPuppet->getHand();
     while (inPuppet->nrSpellsInHand() > mMaxSpellsInHand) {
       Spell* lSpell = lHand.front();
-      mDrawnSpells << lSpell->getUID() << ";";
+      drawn_spells_ << lSpell->getUID() << ";";
       inPuppet->detachSpell(lSpell);
       lSpell = 0;
     }
-    mDrawnSpells << "\n";
+    drawn_spells_ << "\n";
 
-    mLog->infoStream() << "sending drawn spells to Puppet " << inPuppet->getName();
-    std::cout << "drawn spells:\n" << mDrawnSpells.str() << "\n";
+    log_->infoStream() << "sending drawn spells to Puppet " << inPuppet->getName();
+    std::cout << "drawn spells:\n" << drawn_spells_.str() << "\n";
 
     // broadcast the data
-		mStream.Reset();
-		mStream.AssertStreamEmpty(); // _DEBUG_
-    mStream.Write((unsigned char)ID_DRAW_SPELLS);
-    mStream.Write(RakString(mDrawnSpells.str().c_str()));
-    broadcast(mStream);
-    //broadcastCompressed(ID_DRAW_SPELLS, mDrawnSpells);
+    Event evt(EventUID::DrawSpells, EventFeedback::Ok, Event::NoFormat);
+    evt.setProperty("Data", drawn_spells_.str());
+    broadcast(evt);
 	}
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Event Handlers
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-	bool Instance::evtPlayerReady(Event* inEvt) {
-
-		++nrPlayersReady;
+	bool instance::on_player_ready(const Event& inEvt) {
 
 		// are all players ready?
-		if (nrPlayersReady == mPlayers.size())
+		if ((++nr_ready_players_) == players_.size())
 			start();
 
 		return true;
 	}
 
-  bool Instance::evtStartTurn(Event* inEvt) {
+  bool instance::on_start_turn(const Event& inEvt) {
     // start timer and shizzle
 
     // send to all players except the active one
-    Event* lEvt = mEvtMgr->createEvt("TurnStarted");
-    lEvt->setProperty("Puppet", stringify(mActivePuppet->getObjectId()));
+    Event evt(EventUID::TurnStarted);
+    evt.setProperty("Puppet", stringify(active_puppet_->getUID()));
 
-    players_t::const_iterator lPlayer;
-		for (lPlayer = mPlayers.begin(); lPlayer != mPlayers.end(); ++lPlayer) {
-      if ((*lPlayer) == mActivePlayer)
+    for (auto player : players_) {
+      if (player == active_player_)
         continue;
 
-			mServer->sendToPlayer(lEvt, *lPlayer);
-		}
-    lEvt->removeHandler();
+      send(player, evt);
+    }
 
-    mLog->debugStream() << "it's now " << mActivePuppet->getName() << "'s turn";
+    log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
   }
 
-	bool Instance::evtEndTurn(Event* inEvt) {
+	bool instance::on_end_turn(const Event& inEvt) {
     // validate: make sure the sender is the active puppet
-    if (getSender(inEvt) != mActivePuppet) {
-      mLog->errorStream()
-        << getSender(inEvt)->getName()
+    if (get_sender(inEvt)->get_puppet() != active_puppet_) {
+      log_->errorStream()
+        << get_sender(inEvt)->get_puppet()->getName()
         << " is trying to end his opponent's turn!";
       return true;
     }
@@ -497,72 +435,79 @@ namespace Pixy {
 			// and toggle opponent into Blocking state
 
 		// otherwise, just start the opponent's turn
-		mLog->debugStream()
-		<< "ending " << mActivePuppet->getName() << "'s turn ";
+		log_->debugStream()
+		<< "ending " << active_puppet_->getName() << "'s turn ";
 
     // find the next puppet
-    if (mActivePuppet == mPuppets.back())
-      mActivePuppet = mPuppets.front();
+    if (active_puppet_ == puppets_.back())
+      active_puppet_ = puppets_.front();
     else {
-      puppets_t::const_iterator lPuppet;
-      for (lPuppet = mPuppets.begin(); lPuppet != mPuppets.end(); ++lPuppet)
-        if ((*lPuppet) == mActivePuppet) {
-          mActivePuppet = (*(++lPuppet));
+      for (auto puppet : puppets_)
+        if (puppet == active_puppet_) {
+          active_puppet_ = (++puppet);
           break;
         }
     }
-    mActivePlayer = getPlayer(mActivePuppet);
 
-		mLog->debugStream()
-		<< "starting " << mActivePuppet->getName() << "'s turn ";
+    active_player_ = get_player(active_puppet_);
 
-		Event* lEvt = mEvtMgr->createEvt("StartTurn");
-    send(*mActivePlayer, lEvt);
-    this->drawSpells();
+		log_->debugStream()
+		<< "starting " << active_puppet_->getName() << "'s turn ";
+
+		Event evt(EventUID::StartTurn);
+    send(active_player_, evt);
+    this->draw_spells();
 
 		return true;
 	}
 
-	bool Instance::evtCastSpell(Event* inEvt) {
+	bool instance::on_cast_spell(const Event& inEvt) {
 		// dispatch to Lua
-		lua_getfield(mLua, LUA_GLOBALSINDEX, "processSpell");
-		if(!lua_isfunction(mLua, 1))
+		lua_getfield(lua_, LUA_GLOBALSINDEX, "processSpell");
+		if(!lua_isfunction(lua_, 1))
 		{
-			mLog->errorStream() << "could not find Lua event processor!";
-			lua_pop(mLua,1);
+			log_->errorStream() << "could not find Lua event processor!";
+			lua_pop(lua_,1);
 			return true;
 		}
 
+    if (!inEvt.hasProperty("Spell")) {
+      Event evt(inEvt);
+      reject(evt);
+      return true;
+    }
+
 		// find the spell object
-		int lSpellId = convertTo<int>(inEvt->getProperty("SpellId"));
-		const Spell* lSpell = getSpell(lSpellId);
+		int lSpellId = convertTo<int>(inEvt.getProperty("Spell"));
+		const Spell* lSpell = get_spell(lSpellId);
 		Entity* lCaster = lSpell->getCaster();
 
 		/*if (!lSpell) {
-		  lSpell = mWaitingPuppet->getSpell(lSpellId);
+		  lSpell = mWaitingPuppet->get_spell(lSpellId);
 		  lCaster = mWaitingPuppet;
 		}*/
 
 		if (!lSpell || !lCaster) {
-		  mLog->errorStream() << "couldn't find requested Spell with id " << lSpellId;
-		  rejectRequest(inEvt);
+		  log_->errorStream() << "couldn't find requested Spell with id " << lSpellId;
+      Event evt(inEvt);
+		  reject(evt);
 		  return true;
 		}
 
-		tolua_pushusertype(mLua,(void*)lCaster,"Pixy::Entity");
-		tolua_pushusertype(mLua,(void*)lSpell,"Pixy::Spell");
-		tolua_pushusertype(mLua,(void*)inEvt,"Pixy::Event");
+		tolua_pushusertype(lua_,(void*)lCaster,"Pixy::Entity");
+		tolua_pushusertype(lua_,(void*)lSpell,"Pixy::Spell");
+		tolua_pushusertype(lua_,(void*)&inEvt,"Pixy::Event");
 		try {
-			lua_call(mLua, 3, 1);
+			lua_call(lua_, 3, 1);
 		} catch (std::exception& e) {
-			mLog->errorStream() << "Lua Handler: " << e.what();
+			log_->errorStream() << "Lua Handler: " << e.what();
 		}
 
-		bool result = lua_toboolean(mLua, lua_gettop(mLua));
+		bool result = lua_toboolean(lua_, lua_gettop(lua_));
 
-		lua_remove(mLua, lua_gettop(mLua));
+		lua_remove(lua_, lua_gettop(lua_));
 
 		return result;
 	}
-
+}
 }

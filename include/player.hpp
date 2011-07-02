@@ -11,7 +11,7 @@
 #define H_Player_H
 
 #include "Puppet.h"
-#include "event.hpp"
+#include "Event.hpp"
 #include <string>
 
 using std::string;

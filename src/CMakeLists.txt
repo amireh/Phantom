@@ -1,12 +1,12 @@
 # add sources
 SET(Project_SRCS
-  base_connection.cpp
+  #base_connection.cpp
   server_connection.cpp
   server.cpp
   #message_parser.cpp
-  dispatcher.cpp
+  #dispatcher.cpp
   server_main.cpp
-  event.cpp
+  #event.cpp
   db_manager.cpp
   player.cpp
   sresource_manager.cpp
@@ -35,11 +35,11 @@ ENDIF()
 # add sources
 SET(Project_SRCS
   client.cpp
-  base_connection.cpp
+ #base_connection.cpp
   client_connection.cpp
-  event.cpp
+  #event.cpp
   #message_parser.cpp
-  dispatcher.cpp
+  #dispatcher.cpp
   client_main.cpp
 )
 # the executable

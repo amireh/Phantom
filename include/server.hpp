@@ -44,7 +44,7 @@
 // PIXY
 #include "binreloc/binreloc.h"
 #include "PixyShared.h"
-#include "event.hpp"
+#include "Event.hpp"
 //#include "server_connection.hpp"
 //#include "db_manager.hpp"
 #include "sresource_manager.hpp"

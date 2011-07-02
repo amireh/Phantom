@@ -51,7 +51,7 @@ namespace Net {
 
     // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
     boost::asio::ip::tcp::resolver resolver(io_service_);
-    boost::asio::ip::tcp::resolver::query query("127.0.0.1", "60100");
+    boost::asio::ip::tcp::resolver::query query(SERVER_ADDRESS, SERVER_PORT);
     boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
     acceptor_.open(endpoint.protocol());
     acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));

@@ -82,6 +82,8 @@ namespace Net {
     /// Stop the server.
     void stop();
 
+    void dump_stats(int sig);
+
     db_manager& get_dbmgr();
     sresource_manager& get_resmgr();
     match_finder& get_match_finder();
@@ -122,6 +124,8 @@ namespace Net {
     void refresh_timer();
 
 
+
+
     // the number of threads that will call io_service::run()
     const std::size_t thread_pool_size_;
     boost::thread_group workers;
@@ -133,6 +137,7 @@ namespace Net {
     /// The next connection to be accepted.
     connection_ptr new_connection_;
     std::list<connection_ptr> connections;
+    uint64_t nr_connections_;
 
     std::string root_path_, bin_path_, data_path_, log_path_;
 
@@ -151,6 +156,10 @@ namespace Net {
 
     instance_ptr new_instance_;
     std::list<instance_ptr> instances_;
+    uint64_t nr_instances_;
+
+    // monitoring stuff
+    time_t uptime;
 
     static server* __instance;
   };

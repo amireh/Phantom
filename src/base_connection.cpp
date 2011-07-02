@@ -100,9 +100,9 @@ void base_connection::handle_read(
   std::size_t bytes_transferred)
 {
   if (!e) {
-    while (!request_.size() == 0) {
+    //while (!request_.size() == 0) {
       bool result = inbound.fromStream(request_);
-      if (result) {
+      //if (result) {
         request_.consume(bytes_transferred);
 
         handle_inbound();
@@ -110,11 +110,11 @@ void base_connection::handle_read(
         // read next message
         read();
         //strand_.post( boost::bind(&base_connection::read, shared_from_this()) );
-      } else {
-        stop();
-        break;
-      }
-    }
+      //} else {
+      //  stop();
+        //break;
+      //}
+    //}
 
   } else
     stop();

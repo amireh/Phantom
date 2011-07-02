@@ -25,6 +25,8 @@
 #include "server_connection.hpp"
 #include "db_manager.hpp"
 #include "instance.hpp"
+#include <ctime>
+#include <csignal>
 
 namespace Pixy {
 namespace Net {
@@ -41,8 +43,12 @@ namespace Net {
       ping_interval(5),
       dbmgr_(0),
       resmgr_(0),
-      match_finder_(0)
+      match_finder_(0),
+      nr_connections_(0),
+      nr_instances_(0)
   {
+    time(&uptime);
+
     // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
     boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::query query("127.0.0.1", "60100");
@@ -161,9 +167,13 @@ namespace Net {
 
   };
 
-
+  static void catch_sigusr(int sig) {
+    server::singleton().dump_stats(sig);
+  }
   void server::run()
   {
+    //signal(SIGUSR1, &server::dump_stats);
+    signal(SIGUSR1, &catch_sigusr);
     for (std::size_t i = 0; i < thread_pool_size_; ++i)
       workers.create_thread(boost::bind(&server::work, boost::ref(this)));
 
@@ -225,6 +235,42 @@ namespace Net {
       std::cout << "Server: Down cleanly.\n";
     });
   }
+  /* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
+	 *	monitoring
+	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
+  void server::dump_stats(int sig) {
+    std::ofstream out(data_path_ + "/stats.out");
+    if (!out.is_open() || !out.good())
+      return;
+
+    // 1) uptime
+    struct tm * timeinfo = localtime(&uptime);
+    std::string uptime_s = asctime(timeinfo);
+    time_t nowtime;
+    time(&nowtime);
+    timeinfo = localtime(&nowtime);
+    std::string nowtime_s = asctime(timeinfo);
+
+    out << uptime_s;
+    out << nowtime_s;
+
+    // 2) total connections since uptime
+    out << nr_connections_ << "\n";
+    // 3) total current connections
+    out << connections.size() << "\n";
+    // 4) total instances since uptime
+    out << nr_instances_ << "\n";
+    // 5) total current instances
+    int nr_current_instances = 0;
+    for (auto conn : connections)
+      if (conn->in_instance())
+        ++nr_current_instances;
+
+    out << nr_current_instances/2 << "\n";
+
+    out.close();
+  }
+
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	main routines
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
@@ -232,6 +278,7 @@ namespace Net {
     if (!e)
     {
       connections.push_back(new_connection_);
+      ++nr_connections_;
 
       new_connection_->start();
       new_connection_.reset(new connection(io_service_));
@@ -267,6 +314,8 @@ namespace Net {
       new_instance_->bootstrap();
       instances_.push_back(new_instance_);
       new_instance_.reset();
+
+      ++nr_instances_;
     });
   }
   void server::_shutdown_instance(instance_ptr in_instance) {

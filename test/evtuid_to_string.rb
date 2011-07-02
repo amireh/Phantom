@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+
+suids = []
+uids = [
+  "Ping",
+  "Pong",
+  "Login",
+  "Logout",
+  "ValidateClient",
+  "SyncGameData",
+  "CreatePuppet",
+  "UpdatePuppet",
+  "ListRooms",
+  "JoinRoom",
+  "LeaveRoom",
+  "SendMessage",
+  "SendWhisper",
+  "AddFriend",
+  "RemoveFriend",
+  "Ban",
+  "Unban",
+  "ReportAccount",
+  "OpenTicket",
+  "CloseTicket",
+  "JoinQueue",
+  "LeaveQueue",
+  "MatchFound",
+  "SyncProfileData",
+  "SyncLadderData",
+  "SyncPuppetData",
+  "Ready",
+  "MatchStarted",
+  "StartTurn",
+  "DrawSpells",
+  "TurnStarted",
+  "EndTurn",
+  "CastSpell",
+  "CreateEntity",
+  "UpdateEntity",
+  "Attack",
+  "Defend",
+  "MatchFinished",
+  "SyncScore",
+  "SanityCheck"]
+
+uids.each { |uid| suids << "case #{uid}: suid = \"#{uid}\"; break;\n" }
+suids.each { |uid| puts "#{uid}" }

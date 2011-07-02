@@ -171,5 +171,13 @@ namespace Net {
 		player_->set_puppet(puppet);
   }
 
+  bool connection::in_instance() const {
+    return (player_ && player_->get_instance());
+  }
+
+  bool connection::is_authentic() const {
+    return (player_);
+  }
+
 } // namespace Net
 } // namespace Pixy

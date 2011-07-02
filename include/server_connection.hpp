@@ -46,6 +46,9 @@ class connection : public base_connection
   virtual void stop();
   void ping();
 
+  bool is_authentic() const;
+  bool in_instance() const;
+
   protected:
 
   virtual void handle_inbound();

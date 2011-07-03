@@ -14,6 +14,7 @@
 #include "PixyShared.h"
 #include "player.hpp"
 #include "dispatcher.hpp"
+#include "Event.hpp"
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>

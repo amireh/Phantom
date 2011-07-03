@@ -29,6 +29,7 @@
 #include <ostream>
 #include <string>
 #include "client_connection.hpp"
+#include "cresource_manager.hpp"
 
 using boost::asio::ip::tcp;
 namespace Pixy {
@@ -37,6 +38,8 @@ namespace Net {
   class client
   {
     public:
+      typedef std::list<Puppet*> puppets_t;
+
       client(boost::asio::io_service& io_service);
       virtual ~client();
 
@@ -53,6 +56,19 @@ namespace Net {
       void on_join_queue(const Event& evt);
       void on_sync_puppet_data(const Event& evt);
       void on_start_turn(const Event&);
+      void on_turn_started(const Event&);
+      void on_draw_spells(const Event&);
+
+      puppets_t const& get_puppets();
+      void register_puppet(Puppet* inPuppet);
+      void assign_puppet(Puppet* inPuppet);
+      Puppet* get_puppet();
+      Puppet* get_puppet(int inUID);
+
+      CResourceManager rmgr_;
+      puppets_t		puppets_;
+      std::string puppet_name_;
+      Puppet *puppet_, *active_puppet_;
   };
 
 }

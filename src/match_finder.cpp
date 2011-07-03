@@ -50,7 +50,9 @@ namespace Net {
 
 		seekers_.push_back(player);
 
-    player->send(Event(EventUID::JoinQueue, EventFeedback::Ok));
+    Event evt(EventUID::JoinQueue, EventFeedback::Ok);
+    evt.setProperty("Puppet", player->get_puppet()->getName());
+    player->send(evt);
 
     std::cout
       << "a puppet has joined the queue: "

@@ -41,6 +41,7 @@ SET(Project_SRCS
   #message_parser.cpp
   #dispatcher.cpp
   client_main.cpp
+  cresource_manager.cpp
 )
 # the executable
 ADD_EXECUTABLE(Client ${Project_SRCS})

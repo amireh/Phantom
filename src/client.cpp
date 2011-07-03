@@ -48,6 +48,8 @@ namespace Net {
     //conn_->get_dispatcher().bind(EventUID::MatchFound, this, &client::on_match_found);
     conn_->get_dispatcher().bind(EventUID::SyncPuppetData, this, &client::on_sync_puppet_data);
     conn_->get_dispatcher().bind(EventUID::StartTurn, this, &client::on_start_turn);
+    conn_->get_dispatcher().bind(EventUID::TurnStarted, this, &client::on_turn_started);
+    conn_->get_dispatcher().bind(EventUID::DrawSpells, this, &client::on_draw_spells);
 
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
@@ -83,6 +85,40 @@ namespace Net {
     conn_.reset();
   }
 
+
+	void client::register_puppet(Puppet* inPuppet) {
+		puppets_.push_back(inPuppet);
+    if (inPuppet->getName() == puppet_name_)
+      assign_puppet(inPuppet);
+	}
+
+  void client::assign_puppet(Puppet* inPuppet) {
+    assert(inPuppet);
+    std::cout << "I'm playing with a puppet named " << inPuppet->getName() << "\n";
+    puppet_ = inPuppet;
+  }
+
+	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
+	 *	Helpers
+	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
+
+  Puppet* client::get_puppet() {
+    return puppet_;
+  }
+
+  client::puppets_t const& client::get_puppets() {
+    return puppets_;
+  }
+
+  Puppet* client::get_puppet(int inUID) {
+    puppets_t::const_iterator itr;
+    for (itr = puppets_.begin(); itr != puppets_.end(); ++itr)
+      if ((*itr)->getUID() == inUID)
+        return *itr;
+
+    return 0;
+  }
+
   void client::on_login(const Event& evt) {
     if (evt.Feedback == EventFeedback::Ok) {
       std::cout << "logged in! syncing game data\n";
@@ -98,7 +134,6 @@ namespace Net {
   void client::on_sync_game_data(const Event& evt) {
     //std::cout << (evt.Feedback == EventFeedback::Ok ? "logged in!" : "couldn't log in") << "\n";
     //std::cout << evt.getProperty("Data");
-    ResourceManager rmgr;
 
     std::string senc = evt.getProperty("Data");
 
@@ -113,7 +148,7 @@ namespace Net {
 
     std::istringstream datastream(raw2str);
 
-    rmgr.populate(datastream);
+    rmgr_.populate(datastream);
 
     std::cout << "attmepting to join the queue now\n";
 
@@ -131,6 +166,19 @@ namespace Net {
   }
 
   void client::on_sync_puppet_data(const Event& evt) {
+
+    using std::string;
+    using std::vector;
+
+    std::istringstream datastream(evt.getProperty("Data"));
+    list<Puppet*> lPuppets = rmgr_.puppetsFromStream(datastream);
+    datastream.clear();
+
+    for (auto puppet : lPuppets) {
+      this->register_puppet(puppet);
+      puppet->live();
+    }
+
     Event foo(EventUID::Ready);
     conn_->send(foo);
   }
@@ -143,6 +191,99 @@ namespace Net {
       Event foo(EventUID::EndTurn);
       conn_->send(foo);
     });
+  }
+
+  void client::on_turn_started(const Event& evt) {
+
+  }
+
+  void client::on_draw_spells(const Event& evt) {
+    using std::vector;
+    using std::string;
+    using std::istringstream;
+
+    std::cout << "parsing drawn spells \n";
+
+    //BitStream lStream(inPkt->data, inPkt->length, false);
+    //lStream.IgnoreBytes(1); // skip the packet identifier
+
+    //RakString tmp;
+    //lStream.Read(tmp);
+
+    istringstream lData(evt.getProperty("Data"));
+    string lLine;
+
+    // parse the drawn spells and add them to our hand
+    {
+      // how many spells to create
+      getline(lData, lLine);
+      int nrDrawSpells = atoi(Utility::split(lLine, ';').back().c_str());
+
+      // the next line contains the actual string UIDs/names and the owner uid
+      getline(lData, lLine);
+      vector<string> elements = Utility::split(lLine, ';');
+
+      int lPuppetUID = convertTo<int>(elements[0].erase(0,1).c_str()); // strip out the leading $
+      Puppet* lPuppet = get_puppet(lPuppetUID);
+      assert(lPuppet); // _DEBUG_
+
+      //int nrSpells = convertTo<int>(elements[1].c_str());
+      assert((elements.size()-1)/2 == nrDrawSpells);
+
+      int spellsParsed = 0;
+      int index = 0;
+      while (++spellsParsed <= nrDrawSpells) {
+        Spell* lSpell = rmgr_.getSpell(elements[++index]);
+        lSpell->setUID(convertTo<int>(elements[++index]));
+        lSpell->setCaster(lPuppet);
+        lPuppet->attachSpell(lSpell);
+
+        std::cout
+          << "attaching spell with UID: " << lSpell->getUID()
+          << " to puppet " << lPuppet->getUID() << "\n";
+
+        lSpell = 0;
+      }
+
+      lPuppet = 0;
+    }
+
+    // parse the spells to be discarded
+    {
+      getline(lData, lLine);
+      int nrDropSpells = atoi(Utility::split(lLine, ';').back().c_str());
+
+      if (nrDropSpells > 0) {
+
+        std::cout << "dropping " << nrDropSpells << " spells\n";
+
+        // the next line contains the actual string UIDs/names and the owner uid
+        getline(lData, lLine);
+        vector<string> elements = Utility::split(lLine, ';');
+
+        int lPuppetUID = convertTo<int>(elements[0].erase(0,1).c_str()); // strip out the leading $
+        Puppet* lPuppet = get_puppet(lPuppetUID);
+        assert(lPuppet); // _DEBUG_
+
+        //int nrSpells = convertTo<int>(elements[1].c_str());
+        assert((elements.size()-1) == nrDropSpells);
+
+        int spellsParsed = 0;
+        int index = 0;
+        while (++spellsParsed <= nrDropSpells) {
+          Spell* lSpell = (Spell*)lPuppet->getSpell(convertTo<int>(elements[++index]));
+          std::cout
+            << "removing spell with UID " << elements[index]
+            << " from puppet " << lPuppet->getUID() << "\n";
+          assert(lSpell); // _DEBUG_
+
+          lPuppet->detachSpell(lSpell);
+          lSpell = 0;
+        }
+
+        lPuppet = 0;
+      }
+    }
   }
 
 }

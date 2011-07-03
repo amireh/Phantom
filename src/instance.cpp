@@ -426,14 +426,21 @@ namespace Net {
     if (active_puppet_ == puppets_.back())
       active_puppet_ = puppets_.front();
     else {
-      bool found = false;
+      for (puppets_t::const_iterator puppet = puppets_.begin(); puppet != puppets_.end(); ++puppet) {
+        if ((*puppet) == active_puppet_) {
+          ++puppet;
+          active_puppet_ = (*puppet);
+          break;
+        }
+      }
+      /*bool found = false;
       for (auto puppet : puppets_) {
         if (found)
           active_puppet_ = puppet;
           break;
         if (puppet == active_puppet_)
           found = true;
-      }
+      }*/
     }
 
     active_player_ = get_player(active_puppet_);

@@ -14,6 +14,7 @@ local process = function(inCaster, inSpell)
   do
     local evt = Pixy.Event:new()
     evt.UID = Pixy.EventUID.CastSpell
+    evt.Feedback = Pixy.EventFeedback.Ok
     evt:setProperty("Spell", inSpell:getUID())
     Instance:broadcast(evt)
   end
@@ -23,6 +24,7 @@ local process = function(inCaster, inSpell)
     inCaster:setWP(inCaster:getWP() - inSpell:getCostWP())
     local evt = Pixy.Event:new()
     evt.UID = Pixy.EventUID.UpdatePuppet
+    evt.Feedback = Pixy.EventFeedback.Ok
     evt:setProperty("WP", inCaster:getWP())
     Instance:broadcast(evt)
   end

@@ -38,8 +38,8 @@ namespace Pixy {
 namespace Net {
 	typedef list<player_cptr>	players_t;
 	typedef list<puppet_ptr>	puppets_t;
-  typedef std::map<int, spell_ptr> spells_t;
-  typedef std::map<int, Unit*> units_t;
+  //typedef std::map<int, Spell*> spells_t;
+  //typedef std::map<int, Unit*> units_t;
 
 	/*! \class instance
 	 *	\brief
@@ -166,8 +166,8 @@ namespace Net {
     boost::uuids::uuid uuid_;
 		players_t	players_; //! my subscribed players
 		puppets_t	puppets_; //! and their puppets
-    spells_t spells_;
-    units_t units_;
+    //spells_t spells_;
+    //units_t units_;
 
 		bool		started_; //! are the players ready?
 		int			nr_ready_players_; //! how many players are ready?
@@ -209,10 +209,11 @@ namespace Net {
 		 */
 		void create_puppets();
 
-    puppet_ptr get_puppet(int inUID);
-    spell_ptr get_spell(int inUID);
-    Unit* get_unit(int inUID);
     player_cptr get_player(puppet_ptr inPuppet);
+    puppet_ptr get_puppet(int inUID);
+    Spell* get_spell(int inUID);
+    Unit* get_unit(int inUID);
+
 
     std::ostringstream drawn_spells_;
     dispatcher dispatcher_;

@@ -54,6 +54,9 @@ namespace Net {
     conn_->get_dispatcher().bind(EventUID::StartTurn, this, &client::on_start_turn);
     conn_->get_dispatcher().bind(EventUID::TurnStarted, this, &client::on_turn_started);
     conn_->get_dispatcher().bind(EventUID::DrawSpells, this, &client::on_draw_spells);
+    //conn_->get_dispatcher().bind(EventUID::CastSpell, this, &client::on_cast_spell);
+    //conn_->get_dispatcher().bind(EventUID::CreateUnit, this, &client::on_create_unit);
+
 
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
@@ -265,7 +268,7 @@ namespace Net {
       int spellsParsed = 0;
       int index = 0;
       while (++spellsParsed <= nrDrawSpells) {
-        spell_ptr lSpell( rmgr_.getSpell(elements[++index]) );
+        Spell* lSpell = rmgr_.getSpell(elements[++index]);
         lSpell->setUID(convertTo<int>(elements[++index]));
         lSpell->setCaster(lPuppet);
         lPuppet->attachSpell(lSpell);
@@ -274,7 +277,7 @@ namespace Net {
           << "attaching spell with UID: " << lSpell->getUID()
           << " to puppet " << lPuppet->getUID() << "\n";
 
-        lSpell.reset();
+        lSpell = 0;
       }
 
       lPuppet = 0;
@@ -303,14 +306,14 @@ namespace Net {
         int spellsParsed = 0;
         int index = 0;
         while (++spellsParsed <= nrDropSpells) {
-          spell_ptr lSpell( lPuppet->getSpell(convertTo<int>(elements[++index])) );
+          Spell *lSpell = lPuppet->getSpell(convertTo<int>(elements[++index]));
           std::cout
             << "removing spell with UID " << elements[index]
             << " from puppet " << lPuppet->getUID() << "\n";
           assert(lSpell); // _DEBUG_
 
           lPuppet->detachSpell(lSpell->getUID());
-          lSpell.reset();
+          lSpell = 0;
         }
 
         lPuppet = 0;
@@ -318,5 +321,30 @@ namespace Net {
     }
   }
 
+  void client::on_cast_spell(const Event& evt) {
+    if (evt.Feedback == EventFeedback::InvalidRequest) {
+      // the UID was invalid
+      std::cout << "my request to cast a spell was rejected!\n";
+      return;
+    }
+
+    // it's ok, let's find the spell
+    Spell* _spell = 0;
+    Puppet* _puppet = 0;
+    for (auto puppet : puppets_)
+      try {
+        _spell = puppet->getSpell(convertTo<int>(evt.getProperty("Spell")));
+        _puppet = puppet;
+        break;
+      } catch (...) { _spell = 0; }
+    assert(_spell && _puppet);
+    // ...
+
+    // remove it from the puppet's hand
+    _puppet->detachSpell(_spell->getUID());
+  }
+
+  void client::on_create_unit(const Event& evt) {
+  }
 }
 }

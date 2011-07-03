@@ -182,15 +182,18 @@ namespace Net {
     //return NULL;
   }
 
-  spell_ptr instance::get_spell(int inUID) {
-    for (auto puppet : puppets_) {
-      for (auto spell : puppet->getHand())
-        if (spell->getUID() == inUID)
-          return spell;
-    }
+  Spell* instance::get_spell(int inUID) {
+    Spell* spell=0;
+    for (auto puppet : puppets_)
+      try {
+        spell = puppet->getSpell(inUID);
+        break;
+      } catch (...) { spell = 0; }
 
-    throw invalid_uid(std::string("couldn't find a spell with uid " + stringify(inUID)));
-    assert(false);
+    if (!spell)
+      throw invalid_uid(std::string("couldn't find a spell with uid " + stringify(inUID)));
+
+    return spell;
   }
 
   Unit* instance::get_unit(int inUID) {
@@ -354,14 +357,14 @@ namespace Net {
 
 		int i;
 		for (i=0; i< inNrOfSpells; ++i) {
-			spell_ptr lSpell( lDeck->drawSpell() );
+			Spell* lSpell = lDeck->drawSpell();
 			// assign UID and attach to puppet
 			lSpell->setUID(generate_uid());
 			inPuppet->attachSpell(lSpell);
 
       drawn_spells_ << lSpell->getName() << ";" << lSpell->getUID() << ";";
 
-      lSpell.reset();
+      lSpell = 0;
 		}
 
     drawn_spells_ << "\n";
@@ -377,12 +380,11 @@ namespace Net {
 
     Entity::spells_t const& lHand = inPuppet->getHand();
     while (inPuppet->nrSpellsInHand() > mMaxSpellsInHand) {
-      spell_ptr lSpell( lHand.front() );
+      Spell* lSpell = lHand.front();
       drawn_spells_ << lSpell->getUID() << ";";
       inPuppet->detachSpell(lSpell->getUID());
 
-
-      lSpell.reset();
+      lSpell = 0;
     }
     drawn_spells_ << "\n";
 
@@ -499,7 +501,7 @@ namespace Net {
     }
 
 		// find the spell object
-    spell_ptr lSpell;
+    Spell* lSpell;
 		try {
       lSpell = get_spell(convertTo<int>(inEvt.getProperty("Spell")));
     } catch (invalid_uid& e) {
@@ -531,7 +533,7 @@ namespace Net {
 		}
 
 		tolua_pushusertype(lua_,(void*)lCaster,"Pixy::Entity");
-		tolua_pushusertype(lua_,(void*)lSpell.get(),"Pixy::Spell");
+		tolua_pushusertype(lua_,(void*)lSpell,"Pixy::Spell");
 		tolua_pushusertype(lua_,(void*)&inEvt,"Pixy::Event");
 		try {
 			lua_call(lua_, 3, 1);
@@ -546,7 +548,7 @@ namespace Net {
       lCaster->detachSpell(lSpell->getUID());
     }
 
-    lSpell.reset();
+    lSpell = 0;
     lCaster = 0;
 
 		//return result;

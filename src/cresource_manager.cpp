@@ -220,7 +220,7 @@ namespace Net {
       Unit* lUnit = getModelUnit(lUnitId);
       Spell* lSpell = getModelSpell(lSpellId);
 
-      lUnit->attachSpell(spell_ptr(lSpell));
+      lUnit->attachSpell(lSpell);
 
       //std::cout << "Unit " << lUnit->getName() << " has an ability: " << lSpell->getName() << "\n";
 

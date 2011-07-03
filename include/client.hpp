@@ -67,8 +67,10 @@ namespace Net {
 
       CResourceManager rmgr_;
       puppets_t		puppets_;
-      std::string puppet_name_;
+      std::string puppet_name_, account_name_;
       Puppet *puppet_, *active_puppet_;
+
+      static int client_id;
   };
 
 }

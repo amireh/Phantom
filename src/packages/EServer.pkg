@@ -5,7 +5,6 @@ $#include "required.h"
 namespace Pixy {
 namespace Net {
 
-$pfile "Player.pkg"
 $pfile "Instance.pkg"
 
 }

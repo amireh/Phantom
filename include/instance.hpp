@@ -10,10 +10,11 @@
 #ifndef H_instance_H
 #define H_instance_H
 
-#include "PixyLog.h"
-#include "PixyShared.h"
+#include "Pixy.h"
 #include "player.hpp"
 #include "dispatcher.hpp"
+#include "sresource_manager.hpp"
+#include "Spell.h"
 #include "Event.hpp"
 
 #include <boost/uuid/uuid.hpp>
@@ -37,7 +38,7 @@ namespace Pixy {
 namespace Net {
 	typedef list<player_cptr>	players_t;
 	typedef list<puppet_ptr>	puppets_t;
-  typedef std::map<int, Spell*> spells_t;
+  typedef std::map<int, spell_ptr> spells_t;
   typedef std::map<int, Unit*> units_t;
 
 	/*! \class instance
@@ -82,6 +83,7 @@ namespace Net {
      * Sends the Event to the given player.
      */
     void send(player_cptr, const Event&);
+    void send(int in_uid, const Event&);
 
     /*!
      * @brief
@@ -102,6 +104,10 @@ namespace Net {
 		 */
 		player_cptr get_sender(const Event& inEvt);
 
+    Unit& _create_unit(std::string model, Puppet& owner);
+    void  _destroy_unit(int inUID);
+    void  _destroy_unit(Unit&);
+
 	protected:
 
 		void init_lua();
@@ -119,6 +125,8 @@ namespace Net {
      * if inPuppet was not passed, the active puppet is assumed to be chosen
 		 */
 		void draw_spells(puppet_ptr inPuppet, int inNrOfSpells = 2);
+
+
 
 		/* +-+-+-+-+-+-+-+ *
 		 * EVENT HANNDLERS *
@@ -168,8 +176,8 @@ namespace Net {
 
 		int	uid_generator_; //! assigns ids to all entities
 
-    typedef std::map< const Event*, player_cptr > player_events_t;
-    player_events_t player_events_;
+    //typedef std::map< const Event*, player_cptr > player_events_t;
+    //player_events_t player_events_;
 
 	private:
 
@@ -202,13 +210,15 @@ namespace Net {
 		void create_puppets();
 
     puppet_ptr get_puppet(int inUID);
-    Spell* get_spell(int inUID);
+    spell_ptr get_spell(int inUID);
     Unit* get_unit(int inUID);
     player_cptr get_player(puppet_ptr inPuppet);
 
     std::ostringstream drawn_spells_;
     dispatcher dispatcher_;
     boost::asio::strand strand_;
+
+    sresource_manager& rmgr_;
     //BitStream mStream;
 
     bool running_;

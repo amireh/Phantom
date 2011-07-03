@@ -29,10 +29,14 @@ using boost::asio::ip::tcp;
 namespace Pixy {
 namespace Net {
 
+  int client::client_id = 0;
+
   client::client(boost::asio::io_service& io_service)
     : io_service_(io_service),
       conn_(new connection(io_service, "127.0.0.1", "60100")),
-      timer_(io_service_)
+      timer_(io_service_),
+      puppet_(0),
+      active_puppet_(0)
   {
     conn_->connect();
     try {
@@ -54,8 +58,17 @@ namespace Net {
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
+    if (client_id % 2 == 0) {
+      account_name_ = "Kandie";
+      puppet_name_ = "Kandie";
+    } else {
+      account_name_ = "Sugarfly";
+      puppet_name_ = "Sugar";
+    }
+    ++client_id;
+
     Event foo(EventUID::Login);
-    foo.setProperty("Username", "Kandie");
+    foo.setProperty("Username", account_name_);
     foo.setProperty("Password", "tuonela");
     conn_->send(foo);
 
@@ -93,6 +106,8 @@ namespace Net {
 	}
 
   void client::assign_puppet(Puppet* inPuppet) {
+    if (puppet_) // __DEBUG__ since both puppets r named the same
+      return;
     assert(inPuppet);
     std::cout << "I'm playing with a puppet named " << inPuppet->getName() << "\n";
     puppet_ = inPuppet;
@@ -152,8 +167,9 @@ namespace Net {
 
     std::cout << "attmepting to join the queue now\n";
 
+
     Event foo(EventUID::JoinQueue);
-    foo.setProperty("Puppet", "Kandie");
+    foo.setProperty("Puppet", puppet_name_);
     conn_->send(foo);
 
   }
@@ -185,8 +201,23 @@ namespace Net {
 
 
   void client::on_start_turn(const Event& evt) {
+    active_puppet_ = puppet_;
+
     conn_->send(evt);
-    timer_.expires_from_now(boost::posix_time::seconds(1));
+
+    // cast a spell
+    if (!puppet_->getHand().empty())
+    for (auto spell : puppet_->getHand()) {
+      if (spell->getName() == "Summon: Fetish Zij") {
+        Event evt_(EventUID::CastSpell);
+        evt_.setProperty("Spell", spell->getUID());
+        conn_->send(evt_);
+        break;
+      }
+    }
+
+    // end our turn
+    timer_.expires_from_now(boost::posix_time::seconds(2));
     timer_.async_wait( [&](boost::system::error_code e) -> void {
       Event foo(EventUID::EndTurn);
       conn_->send(foo);
@@ -194,7 +225,8 @@ namespace Net {
   }
 
   void client::on_turn_started(const Event& evt) {
-
+    active_puppet_ = get_puppet(convertTo<int>(evt.getProperty("Puppet")));
+    assert(active_puppet_);
   }
 
   void client::on_draw_spells(const Event& evt) {
@@ -233,7 +265,7 @@ namespace Net {
       int spellsParsed = 0;
       int index = 0;
       while (++spellsParsed <= nrDrawSpells) {
-        Spell* lSpell = rmgr_.getSpell(elements[++index]);
+        spell_ptr lSpell( rmgr_.getSpell(elements[++index]) );
         lSpell->setUID(convertTo<int>(elements[++index]));
         lSpell->setCaster(lPuppet);
         lPuppet->attachSpell(lSpell);
@@ -242,7 +274,7 @@ namespace Net {
           << "attaching spell with UID: " << lSpell->getUID()
           << " to puppet " << lPuppet->getUID() << "\n";
 
-        lSpell = 0;
+        lSpell.reset();
       }
 
       lPuppet = 0;
@@ -271,14 +303,14 @@ namespace Net {
         int spellsParsed = 0;
         int index = 0;
         while (++spellsParsed <= nrDropSpells) {
-          Spell* lSpell = (Spell*)lPuppet->getSpell(convertTo<int>(elements[++index]));
+          spell_ptr lSpell( lPuppet->getSpell(convertTo<int>(elements[++index])) );
           std::cout
             << "removing spell with UID " << elements[index]
             << " from puppet " << lPuppet->getUID() << "\n";
           assert(lSpell); // _DEBUG_
 
-          lPuppet->detachSpell(lSpell);
-          lSpell = 0;
+          lPuppet->detachSpell(lSpell->getUID());
+          lSpell.reset();
         }
 
         lPuppet = 0;

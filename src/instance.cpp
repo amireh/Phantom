@@ -14,6 +14,8 @@
 
 TOLUA_API int  tolua_EServer_open (lua_State* tolua_S);
 TOLUA_API int  tolua_EShared_open (lua_State* tolua_S);
+TOLUA_API int  tolua_Event_open (lua_State* tolua_S);
+
 namespace Pixy {
 namespace Net {
 
@@ -22,7 +24,8 @@ namespace Net {
     dispatcher_(io_service),
     strand_(io_service),
     active_puppet_(),
-    active_player_()
+    active_player_(),
+    rmgr_(server::singleton().get_resmgr())
   {
 		uuid_ = boost::uuids::random_generator()();
 
@@ -99,6 +102,7 @@ namespace Net {
 		luaL_openlibs(lua_);
 		tolua_EServer_open(lua_);
     tolua_EShared_open(lua_);
+    tolua_Event_open(lua_);
 
 		//char lFilePath[PATH_MAX];
 		//sprintf(lFilePath,  "%s%s/server/pixy_server.lua", PROJECT_ROOT, PROJECT_SCRIPTS );
@@ -113,7 +117,7 @@ namespace Net {
 		}
 
 		// give Lua a handle of this instance
-		lua_getfield(lua_, LUA_GLOBALSINDEX, "registerinstance");
+		lua_getfield(lua_, LUA_GLOBALSINDEX, "register_instance");
 		if(!lua_isfunction(lua_, 1))
 		{
 			log_->errorStream() << "could not find Lua event processor!";
@@ -121,7 +125,7 @@ namespace Net {
 			return;
 		}
 
-		tolua_pushusertype(lua_,(void*)this,"Pixy::instance");
+		tolua_pushusertype(lua_,(void*)this,"Pixy::Net::instance");
 		try {
 			lua_call(lua_, 1, 1);
 		} catch (std::exception& e) {
@@ -178,18 +182,26 @@ namespace Net {
     //return NULL;
   }
 
-  Spell* instance::get_spell(int inUID) {
-    return spells_.find(inUID)->second;
+  spell_ptr instance::get_spell(int inUID) {
+    for (auto puppet : puppets_) {
+      for (auto spell : puppet->getHand())
+        if (spell->getUID() == inUID)
+          return spell;
+    }
+
+    throw invalid_uid(std::string("couldn't find a spell with uid " + stringify(inUID)));
+    assert(false);
   }
 
   Unit* instance::get_unit(int inUID) {
-    return units_.find(inUID)->second;
+    //return units_.find(inUID)->second;
   }
 
   player_cptr instance::get_player(puppet_ptr inPuppet) {
     for (auto player : players_)
       if (player->get_puppet()->getUID() == inPuppet->getUID())
         return player;
+
 
     assert(false); // shouldnt be here
   }
@@ -201,6 +213,10 @@ namespace Net {
 
   void instance::send(player_cptr player, const Event& evt) {
     player->send(evt);
+  }
+
+  void instance::send(int puppet_uid, const Event& evt) {
+    send(get_player(get_puppet(puppet_uid)), evt);
   }
 
 	void instance::reject(Event& evt) {
@@ -338,13 +354,14 @@ namespace Net {
 
 		int i;
 		for (i=0; i< inNrOfSpells; ++i) {
-			Spell* lSpell = lDeck->drawSpell();
+			spell_ptr lSpell( lDeck->drawSpell() );
 			// assign UID and attach to puppet
 			lSpell->setUID(generate_uid());
 			inPuppet->attachSpell(lSpell);
 
       drawn_spells_ << lSpell->getName() << ";" << lSpell->getUID() << ";";
-      lSpell = 0;
+
+      lSpell.reset();
 		}
 
     drawn_spells_ << "\n";
@@ -358,12 +375,14 @@ namespace Net {
     } else
       drawn_spells_ << 0;
 
-    Puppet::hand_t const& lHand = inPuppet->getHand();
+    Entity::spells_t const& lHand = inPuppet->getHand();
     while (inPuppet->nrSpellsInHand() > mMaxSpellsInHand) {
-      Spell* lSpell = lHand.front();
+      spell_ptr lSpell( lHand.front() );
       drawn_spells_ << lSpell->getUID() << ";";
-      inPuppet->detachSpell(lSpell);
-      lSpell = 0;
+      inPuppet->detachSpell(lSpell->getUID());
+
+
+      lSpell.reset();
     }
     drawn_spells_ << "\n";
 
@@ -375,6 +394,23 @@ namespace Net {
     evt.setProperty("Data", drawn_spells_.str());
     broadcast(evt);
 	}
+
+  Unit& instance::_create_unit(std::string model, Puppet& owner) {
+    Unit* unit_ = rmgr_.getUnit(model, owner.getRace());
+    assert(unit_);
+    unit_->setUID(generate_uid());
+    owner.attachUnit(unit_);
+
+    Event evt(EventUID::CreateUnit);
+    unit_->toEvent(evt);
+    broadcast(evt);
+
+    unit_ = 0;
+  }
+  void instance::_destroy_unit(int inUID) {
+  }
+  void instance::_destroy_unit(Unit&) {
+  }
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Event Handlers
@@ -456,6 +492,35 @@ namespace Net {
 	}
 
 	void instance::on_cast_spell(const Event& inEvt) {
+    if (!inEvt.hasProperty("Spell")) {
+      Event evt(inEvt);
+      reject(evt);
+      return;
+    }
+
+		// find the spell object
+    spell_ptr lSpell;
+		try {
+      lSpell = get_spell(convertTo<int>(inEvt.getProperty("Spell")));
+    } catch (invalid_uid& e) {
+      // reject the event
+      log_->errorStream() << "couldn't find requested Spell with id " << inEvt.getProperty("Spell");
+      Event evt(inEvt);
+		  reject(evt);
+      return;
+    }
+
+		Entity* lCaster = lSpell->getCaster();
+
+    assert(lCaster && lSpell);
+
+    log_->debugStream() << "spell cast: " << lSpell->getUID() << "#" << lSpell->getName();
+    log_->debugStream() << "caster: " << lCaster->getUID() << "#" << lCaster->getName();
+		/*if (!lSpell) {
+		  lSpell = mWaitingPuppet->get_spell(lSpellId);
+		  lCaster = mWaitingPuppet;
+		}*/
+
 		// dispatch to Lua
 		lua_getfield(lua_, LUA_GLOBALSINDEX, "processSpell");
 		if(!lua_isfunction(lua_, 1))
@@ -465,31 +530,8 @@ namespace Net {
 			return;
 		}
 
-    if (!inEvt.hasProperty("Spell")) {
-      Event evt(inEvt);
-      reject(evt);
-      return;
-    }
-
-		// find the spell object
-		int lSpellId = convertTo<int>(inEvt.getProperty("Spell"));
-		const Spell* lSpell = get_spell(lSpellId);
-		Entity* lCaster = lSpell->getCaster();
-
-		/*if (!lSpell) {
-		  lSpell = mWaitingPuppet->get_spell(lSpellId);
-		  lCaster = mWaitingPuppet;
-		}*/
-
-		if (!lSpell || !lCaster) {
-		  log_->errorStream() << "couldn't find requested Spell with id " << lSpellId;
-      Event evt(inEvt);
-		  reject(evt);
-		  return;
-		}
-
 		tolua_pushusertype(lua_,(void*)lCaster,"Pixy::Entity");
-		tolua_pushusertype(lua_,(void*)lSpell,"Pixy::Spell");
+		tolua_pushusertype(lua_,(void*)lSpell.get(),"Pixy::Spell");
 		tolua_pushusertype(lua_,(void*)&inEvt,"Pixy::Event");
 		try {
 			lua_call(lua_, 3, 1);
@@ -500,6 +542,12 @@ namespace Net {
 		bool result = lua_toboolean(lua_, lua_gettop(lua_));
 
 		lua_remove(lua_, lua_gettop(lua_));
+    if (result) {
+      lCaster->detachSpell(lSpell->getUID());
+    }
+
+    lSpell.reset();
+    lCaster = 0;
 
 		//return result;
 	}

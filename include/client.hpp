@@ -60,6 +60,8 @@ namespace Net {
       void on_draw_spells(const Event&);
       void on_cast_spell(const Event&);
       void on_create_unit(const Event&);
+      void on_update_puppet(const Event&);
+
 
       puppets_t const& get_puppets();
       void register_puppet(Puppet* inPuppet);

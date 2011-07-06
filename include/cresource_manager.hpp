@@ -20,8 +20,8 @@ namespace Net {
   class CDeck;
 	class CResourceManager : public ResourceManager {
     public:
-      typedef std::list<Spell*> spells_t;
-      typedef std::list<Unit*> units_t;
+      //typedef std::list<Spell*> spells_t;
+      //typedef std::list<Unit*> units_t;
 
       CResourceManager();
       virtual ~CResourceManager();
@@ -47,8 +47,8 @@ namespace Net {
 
       Puppet* getPuppet(string inName, list<Puppet*>& inPuppets);
 
-      spells_t mSpells[4];
-      units_t mUnits[4];
+      //spells_t mSpells[4];
+      //units_t mUnits[4];
 
       list<Puppet*> mPuppets;
   };

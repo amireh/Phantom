@@ -54,8 +54,9 @@ namespace Net {
     conn_->get_dispatcher().bind(EventUID::StartTurn, this, &client::on_start_turn);
     conn_->get_dispatcher().bind(EventUID::TurnStarted, this, &client::on_turn_started);
     conn_->get_dispatcher().bind(EventUID::DrawSpells, this, &client::on_draw_spells);
-    //conn_->get_dispatcher().bind(EventUID::CastSpell, this, &client::on_cast_spell);
-    //conn_->get_dispatcher().bind(EventUID::CreateUnit, this, &client::on_create_unit);
+    conn_->get_dispatcher().bind(EventUID::CastSpell, this, &client::on_cast_spell);
+    conn_->get_dispatcher().bind(EventUID::CreateUnit, this, &client::on_create_unit);
+    conn_->get_dispatcher().bind(EventUID::UpdatePuppet, this, &client::on_update_puppet);
 
 
 
@@ -339,12 +340,37 @@ namespace Net {
       } catch (...) { _spell = 0; }
     assert(_spell && _puppet);
     // ...
-
+    std::cout << "casted a spell! " << _spell->getName() << "#" << _spell->getUID() << "\n";
     // remove it from the puppet's hand
     _puppet->detachSpell(_spell->getUID());
   }
 
   void client::on_create_unit(const Event& evt) {
+    assert(evt.hasProperty("Name") && evt.hasProperty("OUID") && evt.hasProperty("UID"));
+
+    Puppet* _owner = get_puppet(convertTo<int>(evt.getProperty("OUID")));
+    assert(_owner);
+
+    std::cout << "CreateUnit name: " << evt.getProperty("Name") << "\n";
+    Unit* _unit = rmgr_.getUnit(evt.getProperty("Name"), _owner->getRace());
+    assert(_unit);
+
+    _unit->fromEvent(evt);
+    _owner->attachUnit(_unit);
+
+    _unit = 0;
+    _owner = 0;
+  }
+
+  void client::on_update_puppet(const Event& evt) {
+    assert(evt.hasProperty("UID"));
+
+    Puppet* _puppet = get_puppet(convertTo<int>(evt.getProperty("UID")));
+    assert(_puppet);
+
+    std::cout << "Updating puppet named: " << _puppet->getName() << "\n";
+
+    _puppet->updateFromEvent(evt);
   }
 }
 }

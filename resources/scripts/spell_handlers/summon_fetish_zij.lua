@@ -25,6 +25,7 @@ local process = function(inCaster, inSpell)
     local evt = Pixy.Event:new()
     evt.UID = Pixy.EventUID.UpdatePuppet
     evt.Feedback = Pixy.EventFeedback.Ok
+    evt:setProperty("UID", inCaster:getUID())
     evt:setProperty("WP", inCaster:getWP())
     Instance:broadcast(evt)
   end

@@ -172,6 +172,8 @@ namespace Net {
 
       mSpells[lSpell->getRace()].push_back(lSpell);
 
+      std::cout << "\tRegistered spell: " << lSpell->getName() << "\n";
+
       lSpell = 0;
     }
 
@@ -202,6 +204,8 @@ namespace Net {
       lUnit->setDescription(elements[11]);
 
       mUnits[lUnit->getRace()].push_back(lUnit);
+
+      std::cout << "\tRegistered minion: " << lUnit->getName() << "\n";
 
       lUnit = 0;
     }
@@ -249,7 +253,7 @@ namespace Net {
     for (int i=0; i < WATER; ++i) {
       lSpell = getSpell(inName, (RACE)i);
       if (lSpell)
-        return new Spell(*lSpell);
+        return lSpell;
     }
 
     mLog->errorStream() << "couldnt find a spell named " << inName;

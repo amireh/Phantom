@@ -54,7 +54,7 @@ namespace Net {
   }
 
   void connection::handle_inbound() {
-    if (player_ && player_->get_instance()) {
+    if (in_instance()) {
       Event clone(inbound);
       std::cout << "got an event from " << player_->get_username() << "\n";
       clone.Sender = player_;
@@ -88,6 +88,8 @@ namespace Net {
   }
 
   void connection::on_login(const Event &evt) {
+    assert(!is_authentic());
+
     std::cout << "guest wants to login\n";
 
     if (!evt.hasProperty("Username") || !evt.hasProperty("Password"))
@@ -123,7 +125,7 @@ namespace Net {
   }
 
   void connection::promote(std::string& username) {
-    assert(!player_);
+    assert(!is_authentic());
 
     player_.reset( new Player(this, username) );
     player_->set_online(true);

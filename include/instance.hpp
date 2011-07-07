@@ -104,13 +104,41 @@ namespace Net {
 		 */
 		player_cptr get_sender(const Event& inEvt);
 
+    /*
+     * creates a unit frmo the given model, attaches it to the owner puppet,
+     * and broadcasts a CreateUnit event to clients
+     *
+     * the event contains:
+     * "UID": UID of the newly created unit
+     * "OUID": UID of the owner puppet
+     */
     Unit& _create_unit(std::string model, Puppet& owner);
+    /*
+     * removes a unit from play, and broadcasts a RemoveUnit with the UID
+     */
     void  _destroy_unit(int inUID);
     void  _destroy_unit(Unit&);
 
 	protected:
 
 		void init_lua();
+
+		/*! \brief
+		 *	"subscribes" a player as a participant in this instance, subscribed
+		 *	players will receive events from this instance
+		 */
+		void subscribe(player_cptr);
+
+		/*!	\brief
+		 *	registers event callback handlers
+		 */
+		void bind_handlers();
+
+		/*! \brief
+		 *	transmits puppet info to all players so that they can create and
+		 *	render them
+		 */
+		void create_puppets();
 
 		/*! \brief
 		 *	returns true when both players notified that they're ready by sending
@@ -125,8 +153,6 @@ namespace Net {
      * if inPuppet was not passed, the active puppet is assumed to be chosen
 		 */
 		void draw_spells(puppet_ptr inPuppet, int inNrOfSpells = 2);
-
-
 
 		/* +-+-+-+-+-+-+-+ *
 		 * EVENT HANNDLERS *
@@ -154,11 +180,26 @@ namespace Net {
      */
     void on_end_turn(const Event& inEvt);
 
+    /*
+     * validates the given spell object and passes off to its Lua handler
+     */
 		void on_cast_spell(const Event& inEvt);
 
+    void on_charge(const Event&);
+    void on_cancel_charge(const Event&);
+
+    void on_block(const Event&);
+    void on_cancel_block(const Event&);
+    void on_end_block_phase(const Event&);
+
+	private:
+
+    player_cptr get_player(puppet_ptr inPuppet);
+    puppet_ptr get_puppet(int inUID);
+    Spell* get_spell(int inUID);
+    Unit* get_unit(int inUID);
+
 		log4cpp::Category	*log_;
-		//Server				*mServer;
-		//EventManager		*mEvtMgr;
 		lua_State			*lua_;
 		log4cpp::Category	*lua_log_;
 
@@ -172,55 +213,27 @@ namespace Net {
 		bool		started_; //! are the players ready?
 		int			nr_ready_players_; //! how many players are ready?
 		puppet_ptr		active_puppet_; //! the puppet whose turn is active
+    puppet_ptr    waiting_puppet_;
 		player_cptr		active_player_; //! owner of the active puppet
+    player_cptr   waiting_player_;
 
 		int	uid_generator_; //! assigns ids to all entities
 
     //typedef std::map< const Event*, player_cptr > player_events_t;
     //player_events_t player_events_;
 
-	private:
-
-		/*! \brief
-		 *	"subscribes" a player as a participant in this instance, subscribed
-		 *	players will receive events from this instance
-		 */
-		void subscribe(player_cptr);
-
-		/*!	\brief
-		 *	registers event callback handlers
-		 */
-		void bind_handlers();
-
-		/*! \brief
-		 *	sends to each player an event named "AssignPuppets" that contains
-		 *	two properties:
-		 *		1) "Puppet" -> name of the player's puppet
-		 *		2) "EnemyPuppet" -> name of the enemy's puppet
-		 *	these names are used as unique identifiers for every action taken
-		 *	by the players from now on; Entities (puppets, units, and spells)
-		 *	are _OWNED_ by so said profile
-		 */
-		//void assignPuppets();
-
-		/*! \brief
-		 *	transmits puppet info to all players so that they can create and
-		 *	render them
-		 */
-		void create_puppets();
-
-    player_cptr get_player(puppet_ptr inPuppet);
-    puppet_ptr get_puppet(int inUID);
-    Spell* get_spell(int inUID);
-    Unit* get_unit(int inUID);
-
-
     std::ostringstream drawn_spells_;
     dispatcher dispatcher_;
     boost::asio::strand strand_;
 
     sresource_manager& rmgr_;
-    //BitStream mStream;
+
+    typedef std::list<Unit*> attackers_t;
+    attackers_t attackers_;
+
+    // key is the attacker, value is the list of blockers in order
+    typedef std::map<Unit*, std::list<Unit*> > blockers_t;
+    blockers_t blockers_;
 
     bool running_;
 

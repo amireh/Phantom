@@ -25,6 +25,8 @@ namespace Net {
     strand_(io_service),
     active_puppet_(),
     active_player_(),
+    waiting_puppet_(),
+    waiting_player_(),
     rmgr_(server::singleton().get_resmgr())
   {
 		uuid_ = boost::uuids::random_generator()();
@@ -52,6 +54,8 @@ namespace Net {
 
 	instance::~instance() {
 
+    attackers_.clear();
+    blockers_.clear();
 
 		puppets_.clear();
 
@@ -66,8 +70,12 @@ namespace Net {
 			delete log_;
     }
 
+
+
     active_player_.reset();
     active_puppet_.reset();
+    waiting_player_.reset();
+    waiting_puppet_.reset();
 	}
 
   bool instance::operator==(instance const& rhs) {
@@ -236,6 +244,12 @@ namespace Net {
     dispatcher_.bind(EventUID::StartTurn, this, &instance::on_start_turn);
     dispatcher_.bind(EventUID::EndTurn, this, &instance::on_end_turn);
 		dispatcher_.bind(EventUID::CastSpell, this, &instance::on_cast_spell);
+
+    dispatcher_.bind(EventUID::Charge, this, &instance::on_charge);
+    dispatcher_.bind(EventUID::CancelCharge, this, &instance::on_cancel_charge);
+    dispatcher_.bind(EventUID::Block, this, &instance::on_block);
+    dispatcher_.bind(EventUID::CancelBlock, this, &instance::on_cancel_block);
+    dispatcher_.bind(EventUID::EndBlockPhase, this, &instance::on_end_block_phase);
 	}
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
@@ -249,6 +263,8 @@ namespace Net {
     // start the first player's turn, and track them
 		active_puppet_ = puppets_.front();
     active_player_ = get_player(active_puppet_);
+    waiting_puppet_ = puppets_.back();
+    waiting_player_ = get_player(waiting_puppet_);
 
     log_->debugStream() << "it's now " << active_player_->get_username() << "'s turn";
 		Event evt(EventUID::StartTurn);
@@ -452,9 +468,15 @@ namespace Net {
         << " is trying to end his opponent's turn!";
       return;
     }
+
 		// is any of its units charging?
-			// if yes, toggle into Charging state
+    if (!attackers_.empty()) {
+			// toggle into Charging state
 			// and toggle opponent into Blocking state
+      Event e(EventUID::StartBlockPhase);
+      broadcast(e);
+      return;
+    }
 
 		// otherwise, just start the opponent's turn
 		log_->debugStream()
@@ -467,6 +489,7 @@ namespace Net {
       for (puppets_t::const_iterator puppet = puppets_.begin(); puppet != puppets_.end(); ++puppet) {
         if ((*puppet) == active_puppet_) {
           ++puppet;
+          waiting_puppet_ = active_puppet_;
           active_puppet_ = (*puppet);
           break;
         }
@@ -481,6 +504,7 @@ namespace Net {
       }*/
     }
 
+    waiting_player_ = active_player_;
     active_player_ = get_player(active_puppet_);
 
 		log_->debugStream()
@@ -553,5 +577,154 @@ namespace Net {
 
 		//return result;
 	}
+
+  void instance::on_charge(const Event& evt) {
+    // verify the existence of the unit and that its the owner's turn
+    bool valid = true;
+    Unit *_unit = 0;
+    try {
+      _unit = active_puppet_->getUnit(convertTo<int>(evt.getProperty("UID")));
+    } catch (invalid_uid &e) {
+      valid = false;
+    }
+
+    assert(valid); // __DEBUG__
+
+    // make sure the unit is not resting
+    valid = !_unit->isResting();
+
+    assert(valid); // __DEBUG__
+
+    // finally make sure the unit has not already been flagged for attacking
+    // (this really shouldn't happen)
+    if (!attackers_.empty())
+      for (Unit* unit : attackers_)
+        assert(unit != _unit);
+
+    attackers_.push_back(_unit);
+
+    Event e(EventUID::Charge, EventFeedback::Ok);
+    e.setProperty("UID", _unit->getUID());
+    broadcast(e);
+
+    log_->debugStream() << _unit->getUID() << _unit->getName() << " is charging";
+  }
+
+  void instance::on_cancel_charge(const Event& evt) {
+
+    // verify the existence of the unit and that its the owner's turn
+    Unit *_unit = 0;
+    try {
+      _unit = active_puppet_->getUnit(convertTo<int>(evt.getProperty("UID")));
+    } catch (invalid_uid &e) {
+    }
+
+    assert(_unit); // __DEBUG__
+
+    // make sure the unit was charging (this shouldn't go false)
+    assert(!attackers_.empty());
+
+    bool _found = false;
+    for (Unit* unit : attackers_)
+      if (unit == _unit) {
+        _found = true;
+        break;
+      }
+
+    assert(_found);
+
+    attackers_.remove(_unit);
+
+    log_->debugStream() << _unit->getUID() << _unit->getName() << " is no longer charging";
+  }
+
+  void instance::on_block(const Event& evt) {
+    Unit *attacker, *blocker = 0;
+
+    assert(evt.hasProperty("AUID") && evt.hasProperty("BUID"));
+    try {
+      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("AUID")));
+      blocker = waiting_puppet_->getUnit(convertTo<int>(evt.getProperty("BUID")));
+    } catch (invalid_uid& e) {
+      log_->errorStream() << "invalid block event parameters : " << e.what();
+    }
+
+    assert(attacker && blocker);
+
+    // __DEBUG__ : make sure the attacker is charging
+    assert(!attackers_.empty());
+
+    bool valid = false;
+    for (auto unit : attackers_)
+      if (unit == attacker) {
+        valid = true;
+        break;
+      }
+
+    assert(valid);
+
+    // mark the blocker
+    blockers_t::iterator itr = blockers_.find(attacker);
+    if (itr == blockers_.end()) {
+      // this is the first unit to block the attacker
+      std::list<Unit*> tmp;
+      tmp.push_back(blocker);
+      blockers_.insert(std::make_pair(attacker, tmp));
+    } else {
+      // there are already some blockers marked for this attacker
+
+      // verify that the blocker is not already marked
+      bool _valid = true;
+      for (auto pair : blockers_)
+        for (auto _blocker : pair.second)
+          if (_blocker == blocker) {
+            valid = false;
+            break;
+          }
+
+      if (!_valid) {
+        log_->errorStream() << "blocker " << blocker->getUID() << " already marked for blocking a unit";
+        return;
+      }
+
+      // mark it
+      itr->second.push_back(blocker);
+    }
+
+    Event e(EventUID::Block, EventFeedback::Ok);
+    e.setProperty("AUID", attacker->getUID());
+    e.setProperty("BUID", blocker->getUID());
+    broadcast(e);
+  }
+
+  void instance::on_cancel_block(const Event& evt) {
+    // ...
+  }
+  void instance::on_end_block_phase(const Event& evt) {
+    log_->debugStream()
+      << "starting battle, I have " << attackers_.size()
+      << " attackers and " << blockers_.size () << " units being blocked";
+
+    // 1) tell the clients to start rendering the combat based on what they received
+    // so far
+    broadcast(evt);
+
+    // 2) calculate the combat outcome
+    // ...
+    log_->debugStream() << "calculating battle results";
+
+    // clear combat temps
+    attackers_.clear();
+    blockers_.clear();
+
+    log_->debugStream() << "waiting for the blocker to start their turn";
+    // 3) re-start the on_end_turn routine
+    Event tmp(EventUID::EndTurn);
+    tmp.Sender = active_player_;
+    on_end_turn(tmp);
+
+    // 4) wait for the blocker to acknowledge and start the new turn
+    // (nothing to do)
+  }
 }
 }

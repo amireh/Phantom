@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 {
   try
   {
-    if (argc != 2)
+    if (argc < 2)
     {
       std::cout << "Usage: client <nr_clients>\n";
       return 1;
@@ -38,10 +38,11 @@ int main(int argc, char* argv[])
     boost::asio::io_service io_service;
     //boost::asio::io_service::work work(io_service);
     int nr_clients = atoi(argv[1]);
+    bool odd = argc > 2;
 
     std::vector<Pixy::Net::client*> clients;
     for (int i =0; i < nr_clients; ++i)
-      clients.push_back(new Pixy::Net::client(io_service));
+      clients.push_back(new Pixy::Net::client(io_service, odd));
 
     boost::thread_group threads;
     for (int i=0; i < 2; ++i)

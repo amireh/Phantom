@@ -31,12 +31,14 @@ namespace Net {
 
   int client::client_id = 0;
 
-  client::client(boost::asio::io_service& io_service)
+  client::client(boost::asio::io_service& io_service, bool oddOrEven)
     : io_service_(io_service),
+      odd_(oddOrEven),
       conn_(new connection(io_service, "127.0.0.1", "60100")),
       timer_(io_service_),
       puppet_(0),
-      active_puppet_(0)
+      active_puppet_(0),
+      waiting_puppet_(0)
   {
     conn_->connect();
     try {
@@ -58,18 +60,25 @@ namespace Net {
     conn_->get_dispatcher().bind(EventUID::CreateUnit, this, &client::on_create_unit);
     conn_->get_dispatcher().bind(EventUID::UpdatePuppet, this, &client::on_update_puppet);
 
+    // combat
+    conn_->get_dispatcher().bind(EventUID::Charge, this, &client::on_charge);
+    conn_->get_dispatcher().bind(EventUID::CancelCharge, this, &client::on_cancel_charge);
+    conn_->get_dispatcher().bind(EventUID::StartBlockPhase, this, &client::on_start_block_phase);
+    conn_->get_dispatcher().bind(EventUID::Block, this, &client::on_block);
+    conn_->get_dispatcher().bind(EventUID::CancelBlock, this, &client::on_cancel_block);
+    conn_->get_dispatcher().bind(EventUID::EndBlockPhase, this, &client::on_end_block_phase);
+
 
 
     std::cout << "Size of events : " << sizeof(Event) << "b\n";
 
-    if (client_id % 2 == 0) {
+    if (odd_) {
       account_name_ = "Kandie";
       puppet_name_ = "Kandie";
     } else {
       account_name_ = "Sugarfly";
       puppet_name_ = "Sugar";
     }
-    ++client_id;
 
     Event foo(EventUID::Login);
     foo.setProperty("Username", account_name_);
@@ -205,20 +214,29 @@ namespace Net {
 
 
   void client::on_start_turn(const Event& evt) {
+    waiting_puppet_ = active_puppet_;
     active_puppet_ = puppet_;
 
     conn_->send(evt);
 
     // cast a spell
     if (!puppet_->getHand().empty())
-    for (auto spell : puppet_->getHand()) {
+    for (auto spell : puppet_->getHand())
       if (spell->getName() == "Summon: Fetish Zij") {
         Event evt_(EventUID::CastSpell);
         evt_.setProperty("Spell", spell->getUID());
         conn_->send(evt_);
         break;
       }
-    }
+
+
+    // charge with units
+    if (!puppet_->getUnits().empty())
+      for (auto unit : puppet_->getUnits()) {
+        Event evt_(EventUID::Charge);
+        evt_.setProperty("UID", unit->getUID());
+        conn_->send(evt_);
+      }
 
     // end our turn
     timer_.expires_from_now(boost::posix_time::seconds(2));
@@ -229,6 +247,7 @@ namespace Net {
   }
 
   void client::on_turn_started(const Event& evt) {
+    waiting_puppet_ = active_puppet_;
     active_puppet_ = get_puppet(convertTo<int>(evt.getProperty("Puppet")));
     assert(active_puppet_);
   }
@@ -372,5 +391,114 @@ namespace Net {
 
     _puppet->updateFromEvent(evt);
   }
+
+  void client::on_charge(const Event& evt) {
+    Unit *attacker = 0;
+
+    assert(evt.hasProperty("UID"));
+    try {
+      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("UID")));
+    } catch (invalid_uid& e) {
+      std::cout  << "invalid charge event parameters : " << e.what();
+    }
+
+    // move the unit
+    std::cout << evt.getProperty("UID") << " is charging for an attack\n";
+
+    attackers_.push_back(attacker);
+  }
+
+  void client::on_cancel_charge(const Event& evt) {
+    Unit *attacker = 0;
+
+    assert(evt.hasProperty("UID"));
+    try {
+      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("UID")));
+    } catch (invalid_uid& e) {
+      std::cout  << "invalid charge event parameters : " << e.what();
+    }
+
+    // move the unit back
+    std::cout << evt.getProperty("UID") << " is not charging anymore\n";
+
+    attackers_.remove(attacker);
+  }
+
+  void client::on_start_block_phase(const Event& e) {
+    // is it me being attacked?
+    // if not just return
+    if (active_puppet_ == puppet_) {
+      std::cout << "Opponent's blocking phase is starting"
+       << active_puppet_->getUID() << " vs " << puppet_->getUID() << "\n";
+      return;
+    }
+
+    std::cout << "I'm being attacked, in blocking phase now\n";
+
+    // block with all the units ive got
+    Event resp(EventUID::EndBlockPhase);
+    conn_->send(resp);
+  }
+
+
+  void client::on_block(const Event& evt) {
+    Unit *attacker, *blocker = 0;
+
+    assert(evt.hasProperty("AUID") && evt.hasProperty("BUID"));
+    try {
+      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("AUID")));
+      blocker = waiting_puppet_->getUnit(convertTo<int>(evt.getProperty("BUID")));
+    } catch (invalid_uid& e) {
+      std::cout  << "invalid block event parameters : " << e.what();
+    }
+
+    // mark the blocker
+    blockers_t::iterator itr = blockers_.find(attacker);
+    if (itr == blockers_.end()) {
+      // this is the first unit to block the attacker
+      std::list<Unit*> tmp;
+      tmp.push_back(blocker);
+      blockers_.insert(std::make_pair(attacker, tmp));
+    } else {
+      // there are already some blockers marked for this attacker
+
+      // verify that the blocker is not already marked
+      bool _valid = true;
+      for (auto pair : blockers_)
+        for (auto _blocker : pair.second)
+          if (_blocker == blocker) {
+            _valid = false;
+            break;
+          }
+
+      if (!_valid) {
+        std::cout  << "blocker " << blocker->getUID() << " already marked for blocking a unit";
+        return;
+      }
+
+      // mark it
+      itr->second.push_back(blocker);
+    }
+
+    std::cout << "a blocker " << blocker->getUID()
+      << " was registered to block " << attacker->getUID() << "\n";
+  }
+
+  void client::on_cancel_block(const Event& e) {
+
+  }
+
+
+  void client::on_end_block_phase(const Event& e) {
+    // simulate the battle
+    std::cout << "simulating battle with : "
+      << attackers_.size() << " attacking units and "
+      << blockers_.size() << " units being blocked\n";
+
+    // wait a bit
+    timer_.expires_from_now(boost::posix_time::seconds(2));
+    timer_.wait();
+  }
+
 }
 }

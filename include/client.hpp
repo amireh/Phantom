@@ -38,43 +38,59 @@ namespace Net {
   class client
   {
     public:
-      typedef std::list<Puppet*> puppets_t;
+    typedef std::list<Puppet*> puppets_t;
 
-      client(boost::asio::io_service& io_service);
-      virtual ~client();
+    client(boost::asio::io_service& io_service, bool oddOrEven);
+    virtual ~client();
 
-      void run();
+    void run();
 
     private:
-      connection_ptr conn_;
+    connection_ptr conn_;
 
-      boost::asio::io_service &io_service_;
-      boost::asio::deadline_timer timer_;
+    boost::asio::io_service &io_service_;
+    boost::asio::deadline_timer timer_;
 
-      void on_login(const Event& evt);
-      void on_sync_game_data(const Event& evt);
-      void on_join_queue(const Event& evt);
-      void on_sync_puppet_data(const Event& evt);
-      void on_start_turn(const Event&);
-      void on_turn_started(const Event&);
-      void on_draw_spells(const Event&);
-      void on_cast_spell(const Event&);
-      void on_create_unit(const Event&);
-      void on_update_puppet(const Event&);
+    void on_login(const Event& evt);
+    void on_sync_game_data(const Event& evt);
+    void on_join_queue(const Event& evt);
+    void on_sync_puppet_data(const Event& evt);
+    void on_start_turn(const Event&);
+    void on_turn_started(const Event&);
+    void on_draw_spells(const Event&);
+    void on_cast_spell(const Event&);
+    void on_create_unit(const Event&);
+    void on_update_puppet(const Event&);
+
+    void on_charge(const Event&);
+    void on_cancel_charge(const Event&);
+    void on_start_block_phase(const Event&);
+    void on_block(const Event&);
+    void on_cancel_block(const Event&);
+    void on_end_block_phase(const Event&);
 
 
-      puppets_t const& get_puppets();
-      void register_puppet(Puppet* inPuppet);
-      void assign_puppet(Puppet* inPuppet);
-      Puppet* get_puppet();
-      Puppet* get_puppet(int inUID);
+    puppets_t const& get_puppets();
+    void register_puppet(Puppet* inPuppet);
+    void assign_puppet(Puppet* inPuppet);
+    Puppet* get_puppet();
+    Puppet* get_puppet(int inUID);
 
-      CResourceManager rmgr_;
-      puppets_t		puppets_;
-      std::string puppet_name_, account_name_;
-      Puppet *puppet_, *active_puppet_;
+    CResourceManager rmgr_;
+    puppets_t		puppets_;
+    std::string puppet_name_, account_name_;
+    Puppet *puppet_, *active_puppet_, *waiting_puppet_;
 
-      static int client_id;
+    typedef std::list<Unit*> attackers_t;
+    attackers_t attackers_;
+
+    // key is the attacker, value is the list of blockers in order
+    typedef std::map<Unit*, std::list<Unit*> > blockers_t;
+    blockers_t blockers_;
+
+    static int client_id;
+
+    bool odd_;
   };
 
 }

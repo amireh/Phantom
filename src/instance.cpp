@@ -324,7 +324,7 @@ namespace Net {
       return;
 
     assert(evt.Sender);
-    std::cout << "instance: got evt from " << evt.Sender->get_username() << "\n";
+    //~ std::cout << "instance: got evt from " << evt.Sender->get_username() << "\n";
     dispatcher_.deliver(evt);
   }
 
@@ -388,7 +388,7 @@ namespace Net {
     // tell it to drop some spells if its hand is overflown
     drawn_spells_ << "[drop];";
     int nrOverflow = inPuppet->nrSpellsInHand() - mMaxSpellsInHand;
-    std::cout << "Puppet has " << inPuppet->nrSpellsInHand() << " spells in hand, an overflow of= " << nrOverflow << "\n";
+    //~ std::cout << "Puppet has " << inPuppet->nrSpellsInHand() << " spells in hand, an overflow of= " << nrOverflow << "\n";
     if (nrOverflow > 0) {
       drawn_spells_ << nrOverflow << "\n$" << inPuppet->getUID() << ";";
     } else
@@ -404,8 +404,8 @@ namespace Net {
     }
     drawn_spells_ << "\n";
 
-    log_->infoStream() << "sending drawn spells to Puppet " << inPuppet->getName();
-    std::cout << "drawn spells:\n" << drawn_spells_.str() << "\n";
+    //~ log_->infoStream() << "sending drawn spells to Puppet " << inPuppet->getName();
+    //~ std::cout << "drawn spells:\n" << drawn_spells_.str() << "\n";
 
     // broadcast the data
     Event evt(EventUID::DrawSpells, EventFeedback::Ok, Event::NoFormat);
@@ -714,21 +714,77 @@ namespace Net {
     broadcast(evt);
 
     // 2) calculate the combat outcome
-    // ...
+    /*
+     * for all unit X in attackers_ do:
+     *  for all blocker Y for X in blockers_ do:
+     *    - attack(X,Y)
+     *    - if X is dead, break and get next X
+     *    - if Y is dead, get next Y
+     * for all dead unit Z do:
+     *  - detach from puppet
+     */
+    for (auto attacker : attackers_) {
+      attacker->reset();
+
+      blockers_t::iterator blockers = blockers_.find(attacker);
+      if (blockers != blockers_.end()) {
+        for (auto blocker : blockers->second) {
+          blocker->reset();
+          attacker->attack(blocker);
+          if (attacker->isDead()) {
+            death_list_.push_back(attacker);
+            break;
+          }
+        }
+      } else {
+        std::cout
+          << "attacker " << attacker->getUID()
+          << " is attacking puppet " << waiting_puppet_->getName()
+          << " which has " << waiting_puppet_->getHP();
+        attacker->attack(waiting_puppet_.get());
+        std::cout
+          << " and is dead? " << (waiting_puppet_->isDead() ? "yes" : "no") << "\n";
+        if (waiting_puppet_->isDead()) {
+          // game over
+          return finish(active_puppet_);
+        }
+      }
+    }
+    // clean up dead units
+    for (auto unit : death_list_)
+      static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
+
     log_->debugStream() << "calculating battle results";
 
     // clear combat temps
+    death_list_.clear();
     attackers_.clear();
     blockers_.clear();
 
     log_->debugStream() << "waiting for the blocker to start their turn";
     // 3) re-start the on_end_turn routine
-    Event tmp(EventUID::EndTurn);
-    tmp.Sender = active_player_;
-    on_end_turn(tmp);
+    //~ Event tmp(EventUID::EndTurn);
+    //~ tmp.Sender = active_player_;
+    //~ on_end_turn(tmp);
 
     // 4) wait for the blocker to acknowledge and start the new turn
     // (nothing to do)
+  }
+
+  void instance::finish(puppet_ptr inWinner) {
+
+    Event evt(EventUID::MatchFinished);
+    evt.setProperty("W", inWinner->getUID());
+    broadcast(evt);
+
+    log_->infoStream() << "match is over, winner is " << inWinner->getName();
+
+    // clean up
+    death_list_.clear();
+    attackers_.clear();
+    blockers_.clear();
+
+    running_ = false;
   }
 }
 }

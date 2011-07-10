@@ -194,6 +194,8 @@ namespace Net {
 
 	private:
 
+    void finish(puppet_ptr);
+
     player_cptr get_player(puppet_ptr inPuppet);
     puppet_ptr get_puppet(int inUID);
     Spell* get_spell(int inUID);
@@ -230,6 +232,9 @@ namespace Net {
 
     typedef std::list<Unit*> attackers_t;
     attackers_t attackers_;
+
+    typedef std::vector<Unit*> death_list_t;
+    death_list_t death_list_;
 
     // key is the attacker, value is the list of blockers in order
     typedef std::map<Unit*, std::list<Unit*> > blockers_t;

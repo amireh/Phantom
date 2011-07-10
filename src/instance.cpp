@@ -635,6 +635,10 @@ namespace Net {
 
     attackers_.remove(_unit);
 
+    Event e(EventUID::CancelCharge, EventFeedback::Ok);
+    e.setProperty("UID", _unit->getUID());
+    broadcast(e);
+
     log_->debugStream() << _unit->getUID() << _unit->getName() << " is no longer charging";
   }
 

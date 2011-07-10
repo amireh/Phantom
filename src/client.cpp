@@ -231,12 +231,12 @@ namespace Net {
 
 
     // charge with units
-    if (!puppet_->getUnits().empty())
+    /*if (!puppet_->getUnits().empty())
       for (auto unit : puppet_->getUnits()) {
         Event evt_(EventUID::Charge);
         evt_.setProperty("UID", unit->getUID());
         conn_->send(evt_);
-      }
+      }*/
 
     // end our turn
     timer_.expires_from_now(boost::posix_time::seconds(2));

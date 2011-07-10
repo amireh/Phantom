@@ -231,12 +231,12 @@ namespace Net {
 
 
     // charge with units
-    /*if (!puppet_->getUnits().empty())
+    if (!puppet_->getUnits().empty())
       for (auto unit : puppet_->getUnits()) {
         Event evt_(EventUID::Charge);
         evt_.setProperty("UID", unit->getUID());
         conn_->send(evt_);
-      }*/
+      }
 
     // end our turn
     timer_.expires_from_now(boost::posix_time::seconds(2));
@@ -444,10 +444,10 @@ namespace Net {
   void client::on_block(const Event& evt) {
     Unit *attacker, *blocker = 0;
 
-    assert(evt.hasProperty("AUID") && evt.hasProperty("BUID"));
+    assert(evt.hasProperty("A") && evt.hasProperty("B"));
     try {
-      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("AUID")));
-      blocker = waiting_puppet_->getUnit(convertTo<int>(evt.getProperty("BUID")));
+      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("A")));
+      blocker = waiting_puppet_->getUnit(convertTo<int>(evt.getProperty("B")));
     } catch (invalid_uid& e) {
       std::cout  << "invalid block event parameters : " << e.what();
     }
@@ -495,9 +495,53 @@ namespace Net {
       << attackers_.size() << " attacking units and "
       << blockers_.size() << " units being blocked\n";
 
-    // wait a bit
-    timer_.expires_from_now(boost::posix_time::seconds(2));
-    timer_.wait();
+    for (auto attacker : attackers_) {
+      attacker->reset();
+
+      blockers_t::iterator blockers = blockers_.find(attacker);
+      if (blockers != blockers_.end()) {
+        for (auto blocker : blockers->second) {
+          blocker->reset();
+          attacker->attack(blocker, true);
+
+          if (blocker->isDead())
+            death_list_.push_back(blocker);
+
+          if (attacker->isDead()) {
+            death_list_.push_back(attacker);
+            break;
+          }
+        }
+      } else {
+        std::cout
+          << "attacker " << attacker->getUID()
+          << " is attacking puppet " << waiting_puppet_->getName()
+          << " which has " << waiting_puppet_->getHP();
+        attacker->attack(waiting_puppet_);
+        std::cout
+          << " and is dead? " << (waiting_puppet_->isDead() ? "yes" : "no") << "\n";
+        if (waiting_puppet_->isDead()) {
+          std::cout << "Game over! " << waiting_puppet_->getName() << " is dead!\n";
+          return;
+        }
+      }
+    }
+    // clean up dead units
+    for (auto unit : death_list_)
+      static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
+
+    // clear combat temps
+    death_list_.clear();
+    attackers_.clear();
+    blockers_.clear();
+
+    if (active_puppet_ == puppet_) {
+      // wait a bit
+      timer_.expires_from_now(boost::posix_time::seconds(2));
+      timer_.wait();
+
+      conn_->send(Event(EventUID::EndTurn));
+    }
   }
 
 }

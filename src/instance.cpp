@@ -483,13 +483,13 @@ namespace Net {
 		<< "ending " << active_puppet_->getName() << "'s turn ";
 
     // find the next puppet
+    waiting_puppet_ = active_puppet_;
     if (active_puppet_ == puppets_.back())
       active_puppet_ = puppets_.front();
     else {
       for (puppets_t::const_iterator puppet = puppets_.begin(); puppet != puppets_.end(); ++puppet) {
         if ((*puppet) == active_puppet_) {
           ++puppet;
-          waiting_puppet_ = active_puppet_;
           active_puppet_ = (*puppet);
           break;
         }
@@ -588,6 +588,17 @@ namespace Net {
       valid = false;
     }
 
+    std::cout
+      << "attempting to find unit with UID : " << evt.getProperty("UID")
+      << " and active puppet " << active_puppet_->getUID() << "#" << active_puppet_->getName()
+      << " has: \n";
+    for (auto unit : active_puppet_->getUnits())
+      std::cout << "\t+" << unit->getUID() << "#" << unit->getName() << "\n";
+
+
+    //~ if (!valid)
+      //~ return;
+
     assert(valid); // __DEBUG__
 
     // make sure the unit is not resting
@@ -645,10 +656,10 @@ namespace Net {
   void instance::on_block(const Event& evt) {
     Unit *attacker, *blocker = 0;
 
-    assert(evt.hasProperty("AUID") && evt.hasProperty("BUID"));
+    assert(evt.hasProperty("A") && evt.hasProperty("B"));
     try {
-      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("AUID")));
-      blocker = waiting_puppet_->getUnit(convertTo<int>(evt.getProperty("BUID")));
+      attacker = active_puppet_->getUnit(convertTo<int>(evt.getProperty("A")));
+      blocker = waiting_puppet_->getUnit(convertTo<int>(evt.getProperty("B")));
     } catch (invalid_uid& e) {
       log_->errorStream() << "invalid block event parameters : " << e.what();
     }
@@ -695,9 +706,11 @@ namespace Net {
       itr->second.push_back(blocker);
     }
 
+    log_->infoStream() << blocker->getUID() << " is blocking " << attacker->getUID();
+
     Event e(EventUID::Block, EventFeedback::Ok);
-    e.setProperty("AUID", attacker->getUID());
-    e.setProperty("BUID", blocker->getUID());
+    e.setProperty("A", attacker->getUID());
+    e.setProperty("B", blocker->getUID());
     broadcast(e);
   }
 
@@ -730,11 +743,16 @@ namespace Net {
       if (blockers != blockers_.end()) {
         for (auto blocker : blockers->second) {
           blocker->reset();
-          attacker->attack(blocker);
+          attacker->attack(blocker, true);
+
+          if (blocker->isDead())
+            death_list_.push_back(blocker);
+
           if (attacker->isDead()) {
             death_list_.push_back(attacker);
             break;
           }
+
         }
       } else {
         std::cout
@@ -750,11 +768,12 @@ namespace Net {
         }
       }
     }
+    log_->debugStream() << "calculating battle results";
+
     // clean up dead units
+    log_->debugStream() << death_list_.size() << " dead units";
     for (auto unit : death_list_)
       static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
-
-    log_->debugStream() << "calculating battle results";
 
     // clear combat temps
     death_list_.clear();

@@ -617,6 +617,9 @@ namespace Net {
 
     assert(valid); // __DEBUG__
 
+    if (_unit->getAP() <= 0)
+      return;
+
     // finally make sure the unit has not already been flagged for attacking
     // (this really shouldn't happen)
     if (!attackers_.empty())
@@ -726,7 +729,32 @@ namespace Net {
   }
 
   void instance::on_cancel_block(const Event& evt) {
-    // ...
+    Unit *blocker = 0;
+    try {
+      blocker = waiting_puppet_->getUnit(convertTo<int>(evt.getProperty("UID")));
+    } catch (invalid_uid &e) {
+    }
+
+    assert(blocker);
+    assert(!blockers_.empty());
+    // find the blocker's target
+
+    Unit *attacker = 0;
+    for (auto pair : blockers_)
+      for (auto _blocker : pair.second)
+        if (_blocker == blocker) {
+          attacker = pair.first;
+          break;
+        }
+
+    assert(attacker);
+    blockers_.find(attacker)->second.remove(blocker);
+
+    Event e(EventUID::CancelBlock, EventFeedback::Ok);
+    e.setProperty("B", blocker->getUID());
+    e.setProperty("A", attacker->getUID());
+    broadcast(e);
+
   }
   void instance::on_end_block_phase(const Event& evt) {
     log_->debugStream()

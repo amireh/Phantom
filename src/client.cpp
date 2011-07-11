@@ -230,19 +230,19 @@ namespace Net {
       //}
     }
 
-    timer_.expires_from_now(boost::posix_time::seconds(1));
-    timer_.wait();
-
     // charge with units
-    if (!puppet_->getUnits().empty())
+    if (!puppet_->getUnits().empty()) {
+      timer_.expires_from_now(boost::posix_time::seconds(1));
+      timer_.wait();
       for (auto unit : puppet_->getUnits()) {
         Event evt_(EventUID::Charge);
         evt_.setProperty("UID", unit->getUID());
         conn_->send(evt_);
       }
+    }
 
     // end our turn
-    timer_.expires_from_now(boost::posix_time::seconds(2));
+    timer_.expires_from_now(boost::posix_time::seconds(1));
     timer_.async_wait( [&](boost::system::error_code e) -> void {
       Event foo(EventUID::EndTurn);
       conn_->send(foo);

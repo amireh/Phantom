@@ -32,7 +32,9 @@ namespace Net {
 		uuid_ = boost::uuids::random_generator()();
 
 		started_ = false;
+    in_battle_ = false;
 		nr_ready_players_ = 0;
+    nr_battle_acks_ = 0;
 		//nrSpellsPerTurn = 2;
 		uid_generator_ = 0;
 
@@ -56,6 +58,8 @@ namespace Net {
 
     attackers_.clear();
     blockers_.clear();
+    death_list_.clear();
+    players_.clear();
 
 		puppets_.clear();
 
@@ -250,6 +254,7 @@ namespace Net {
     dispatcher_.bind(EventUID::Block, this, &instance::on_block);
     dispatcher_.bind(EventUID::CancelBlock, this, &instance::on_cancel_block);
     dispatcher_.bind(EventUID::EndBlockPhase, this, &instance::on_end_block_phase);
+    dispatcher_.bind(EventUID::BattleOver, this, &instance::on_battle_over);
 	}
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
@@ -321,6 +326,10 @@ namespace Net {
 
   void instance::enqueue(const Event& evt, player_cptr sender) {
     if (!running_)
+      return;
+
+    // if a battle is going on, reject any non-battle events (see EventUID in Event.hpp)
+    if (in_battle_ && (evt.UID <= EventUID::MarkBattleEvents || evt.UID >= EventUID::EndMarkBattleEvents))
       return;
 
     assert(evt.Sender);
@@ -471,6 +480,8 @@ namespace Net {
 
 		// is any of its units charging?
     if (!attackers_.empty()) {
+      in_battle_ = true;
+      nr_battle_acks_ = 0;
 			// toggle into Charging state
 			// and toggle opponent into Blocking state
       Event e(EventUID::StartBlockPhase);
@@ -788,6 +799,17 @@ namespace Net {
 
     // 4) wait for the blocker to acknowledge and start the new turn
     // (nothing to do)
+  }
+
+  void instance::on_battle_over(const Event& evt) {
+    ++nr_battle_acks_;
+    if (nr_battle_acks_ == players_.size()) {
+      in_battle_ = false;
+
+      Event tmp(EventUID::EndTurn);
+      tmp.Sender = active_player_;
+      on_end_turn(tmp);
+    }
   }
 
   void instance::finish(puppet_ptr inWinner) {

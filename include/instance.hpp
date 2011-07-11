@@ -191,6 +191,7 @@ namespace Net {
     void on_block(const Event&);
     void on_cancel_block(const Event&);
     void on_end_block_phase(const Event&);
+    void on_battle_over(const Event&);
 
 	private:
 
@@ -214,10 +215,15 @@ namespace Net {
 
 		bool		started_; //! are the players ready?
 		int			nr_ready_players_; //! how many players are ready?
+    // on every attack, both clients must send a BattleOver event
+    // to start the next turn
+    int nr_battle_acks_;
 		puppet_ptr		active_puppet_; //! the puppet whose turn is active
     puppet_ptr    waiting_puppet_;
 		player_cptr		active_player_; //! owner of the active puppet
     player_cptr   waiting_player_;
+
+    bool in_battle_;
 
 		int	uid_generator_; //! assigns ids to all entities
 

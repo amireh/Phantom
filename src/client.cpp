@@ -221,14 +221,17 @@ namespace Net {
 
     // cast a spell
     if (!puppet_->getHand().empty())
-    for (auto spell : puppet_->getHand())
-      if (spell->getName() == "Summon: Fetish Zij") {
+    for (auto spell : puppet_->getHand()) {
+      //if (spell->getName() == "Summon: Fetish Zij") {
         Event evt_(EventUID::CastSpell);
         evt_.setProperty("Spell", spell->getUID());
         conn_->send(evt_);
-        break;
-      }
+        //break;
+      //}
+    }
 
+    timer_.expires_from_now(boost::posix_time::seconds(1));
+    timer_.wait();
 
     // charge with units
     if (!puppet_->getUnits().empty())
@@ -535,13 +538,7 @@ namespace Net {
     attackers_.clear();
     blockers_.clear();
 
-    if (active_puppet_ == puppet_) {
-      // wait a bit
-      timer_.expires_from_now(boost::posix_time::seconds(2));
-      timer_.wait();
-
-      conn_->send(Event(EventUID::EndTurn));
-    }
+    conn_->send(Event(EventUID::BattleOver));
   }
 
 }

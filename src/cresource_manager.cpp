@@ -222,7 +222,7 @@ namespace Net {
       string lSpellId = elements[1];
 
       Unit* lUnit = getModelUnit(lUnitId);
-      Spell* lSpell = getModelSpell(lSpellId);
+      Spell* lSpell = getSpell(lSpellId);
 
       lUnit->attachSpell(lSpell);
 

@@ -27,12 +27,14 @@ namespace Net {
     active_player_(),
     waiting_puppet_(),
     waiting_player_(),
+    winner_(),
     rmgr_(server::singleton().get_resmgr())
   {
 		uuid_ = boost::uuids::random_generator()();
 
 		started_ = false;
     in_battle_ = false;
+    finished_ = false;
 		nr_ready_players_ = 0;
     nr_battle_acks_ = 0;
 		//nrSpellsPerTurn = 2;
@@ -59,9 +61,17 @@ namespace Net {
     attackers_.clear();
     blockers_.clear();
     death_list_.clear();
-    players_.clear();
+    puppets_.clear();
 
-		puppets_.clear();
+
+    winner_.reset();
+    active_puppet_.reset();
+    waiting_puppet_.reset();
+
+    active_player_.reset();
+    waiting_player_.reset();
+
+    players_.clear();
 
 		if (lua_)
 			lua_close(lua_);
@@ -73,13 +83,6 @@ namespace Net {
 		if (log_) {
 			delete log_;
     }
-
-
-
-    active_player_.reset();
-    active_puppet_.reset();
-    waiting_player_.reset();
-    waiting_puppet_.reset();
 	}
 
   bool instance::operator==(instance const& rhs) {
@@ -352,6 +355,8 @@ namespace Net {
       if (active_player_ == player)
         active_player_.reset();
 
+      ((Player*)player.get())->leave_instance();
+
       // TODO: ask opponents if they'd like to wait for player to rejoin
       players_.remove(player);
 
@@ -465,6 +470,10 @@ namespace Net {
 
       send(player, evt);
     }
+
+    // un-rest all the player's resting units
+    for (auto unit : active_puppet_->getUnits())
+      unit->getUp();
 
     log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
   }
@@ -692,6 +701,11 @@ namespace Net {
 
     assert(valid);
 
+    // is the blocker resting?
+    valid = !blocker->isResting();
+
+    assert(valid);
+
     // mark the blocker
     blockers_t::iterator itr = blockers_.find(attacker);
     if (itr == blockers_.end()) {
@@ -814,6 +828,10 @@ namespace Net {
     for (auto unit : death_list_)
       static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
 
+    // rest attackers
+    for (auto unit : attackers_)
+      unit->rest();
+
     // clear combat temps
     death_list_.clear();
     attackers_.clear();
@@ -834,26 +852,34 @@ namespace Net {
     if (nr_battle_acks_ == players_.size()) {
       in_battle_ = false;
 
-      Event tmp(EventUID::EndTurn);
-      tmp.Sender = active_player_;
-      on_end_turn(tmp);
+      // match is over
+      if (waiting_puppet_->isDead()) {
+        winner_ = active_puppet_;
+        log_->infoStream() << "match is over, winner is " << winner_->getName();
+
+        Event evt(EventUID::MatchFinished);
+        evt.setProperty("W", winner_->getUID());
+        broadcast(evt);
+
+        running_ = false;
+      }
+      else {
+        Event tmp(EventUID::EndTurn);
+        tmp.Sender = active_player_;
+        on_end_turn(tmp);
+      }
     }
   }
 
   void instance::finish(puppet_ptr inWinner) {
 
-    Event evt(EventUID::MatchFinished);
-    evt.setProperty("W", inWinner->getUID());
-    broadcast(evt);
-
-    log_->infoStream() << "match is over, winner is " << inWinner->getName();
+    winner_ = inWinner;
+    finished_ = true;
 
     // clean up
     death_list_.clear();
     attackers_.clear();
     blockers_.clear();
-
-    running_ = false;
   }
 }
 }

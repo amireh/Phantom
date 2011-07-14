@@ -15,7 +15,6 @@
 #include "Talent.h"
 #include "PixyUtility.h"
 
-#include "player.hpp"
 //#include "db_manager.hpp"
 
 //~ #include "BitStream.h"

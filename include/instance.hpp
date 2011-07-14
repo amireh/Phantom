@@ -223,7 +223,10 @@ namespace Net {
 		player_cptr		active_player_; //! owner of the active puppet
     player_cptr   waiting_player_;
 
+    puppet_ptr winner_;
+
     bool in_battle_;
+    bool finished_;
 
 		int	uid_generator_; //! assigns ids to all entities
 

@@ -12,6 +12,7 @@ namespace Net {
 
 	match_finder::~match_finder() {
     log_->infoStream() << "shutting down";
+    seekers_.clear();
 
 		if (log_)
 			delete log_;

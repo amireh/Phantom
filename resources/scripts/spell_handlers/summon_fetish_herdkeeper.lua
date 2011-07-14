@@ -17,6 +17,7 @@ local process = function(inCaster, inSpell)
     evt.Feedback = Pixy.EventFeedback.Ok
     evt:setProperty("Spell", inSpell:getUID())
     Instance:broadcast(evt)
+    evt:delete()
   end
 
   -- update the puppet stats
@@ -28,6 +29,7 @@ local process = function(inCaster, inSpell)
     evt:setProperty("UID", inCaster:getUID())
     evt:setProperty("WP", inCaster:getWP())
     Instance:broadcast(evt)
+    evt:delete()
   end
 
 	return true

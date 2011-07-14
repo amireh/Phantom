@@ -47,8 +47,9 @@ namespace Net {
     /// name of the puppet the player joined the queue with
 		void set_puppet(puppet_ptr inPuppet);
 		void set_instance(instance_ptr);
-    void set_connection(connection*);
     void set_online(bool);
+
+    void leave_instance();
 
   private:
     connection* conn_;

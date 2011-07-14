@@ -64,5 +64,9 @@ namespace Net {
   bool Player::is_online() const {
     return online_;
   }
+
+  void Player::leave_instance() {
+    instance_.reset();
+  }
 }
 }

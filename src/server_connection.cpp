@@ -26,7 +26,11 @@ namespace Net {
 
       // stop referencing it
 
+      std::cout
+        << "Connection: my player " << player_->get_username() << " has "
+        << player_.use_count() << " users\n";
     }
+
     player_.reset();
 
     std::cout << "Connection: destroyed\n";

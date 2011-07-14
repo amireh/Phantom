@@ -219,6 +219,9 @@ namespace Net {
 
     conn_->send(evt);
 
+    for (auto unit : puppet_->getUnits())
+      unit->getUp();
+
     // cast a spell
     if (!puppet_->getHand().empty())
     for (auto spell : puppet_->getHand()) {
@@ -253,6 +256,9 @@ namespace Net {
     waiting_puppet_ = active_puppet_;
     active_puppet_ = get_puppet(convertTo<int>(evt.getProperty("Puppet")));
     assert(active_puppet_);
+
+    for (auto unit : active_puppet_->getUnits())
+      unit->getUp();
   }
 
   void client::on_draw_spells(const Event& evt) {
@@ -525,13 +531,15 @@ namespace Net {
           << " and is dead? " << (waiting_puppet_->isDead() ? "yes" : "no") << "\n";
         if (waiting_puppet_->isDead()) {
           std::cout << "Game over! " << waiting_puppet_->getName() << " is dead!\n";
-          return;
         }
       }
     }
     // clean up dead units
     for (auto unit : death_list_)
       static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
+
+    for (auto unit : attackers_)
+      unit->rest();
 
     // clear combat temps
     death_list_.clear();

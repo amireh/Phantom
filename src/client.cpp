@@ -59,6 +59,7 @@ namespace Net {
     conn_->get_dispatcher().bind(EventUID::CastSpell, this, &client::on_cast_spell);
     conn_->get_dispatcher().bind(EventUID::CreateUnit, this, &client::on_create_unit);
     conn_->get_dispatcher().bind(EventUID::UpdatePuppet, this, &client::on_update_puppet);
+    conn_->get_dispatcher().bind(EventUID::UpdateUnit, this, &client::on_update_unit);
 
     // combat
     conn_->get_dispatcher().bind(EventUID::Charge, this, &client::on_charge);
@@ -145,6 +146,15 @@ namespace Net {
         return *itr;
 
     return 0;
+  }
+
+  Unit* client::get_unit(int inUID) {
+    for (auto puppet : puppets_)
+      for (auto unit : puppet->getUnits())
+        if (unit->getUID() == inUID)
+          return unit;
+
+    throw invalid_uid("in client::get_unit() : " + stringify(inUID));
   }
 
   void client::on_login(const Event& evt) {
@@ -368,6 +378,24 @@ namespace Net {
       } catch (...) { _spell = 0; }
     assert(_spell && _puppet);
     // ...
+    if (_spell->getName() == "Chains of Command") {
+      Unit* _unit = 0;
+      for (auto puppet : puppets_)
+        for (auto unit : puppet->getUnits()) {
+          if (unit->getUID() == convertTo<int>(evt.getProperty("T"))) {
+            _unit = unit;
+            break;
+          }
+        }
+      assert(_unit);
+
+
+      ((Puppet*)_unit->getOwner())->detachUnit(_unit->getUID(), false);
+      _puppet->attachUnit(_unit);
+
+      std::cout << "**MIND CONTROLLED! Unit: " << _unit->getName() << "#"<<_unit->getUID()
+      <<"is now owned by " <<_puppet->getName()<<"#"<<_puppet->getUID()<<"\n";
+    }
     std::cout << "casted a spell! " << _spell->getName() << "#" << _spell->getUID() << "\n";
     // remove it from the puppet's hand
     _puppet->detachSpell(_spell->getUID());
@@ -415,6 +443,20 @@ namespace Net {
     std::cout << evt.getProperty("UID") << " is charging for an attack\n";
 
     attackers_.push_back(attacker);
+  }
+
+  void client::on_update_unit(const Event& evt) {
+    assert(evt.hasProperty("UID"));
+
+    Unit* _unit = get_unit(convertTo<int>(evt.getProperty("UID")));
+    assert(_unit);
+
+    std::cout << "Updating unit named: " << _unit->getName() << "#" << _unit->getUID() << "\n";
+
+    _unit->updateFromEvent(evt);
+    if (_unit->isDead())
+      ((Puppet*)_unit->getOwner())->detachUnit(_unit->getUID());
+
   }
 
   void client::on_cancel_charge(const Event& evt) {

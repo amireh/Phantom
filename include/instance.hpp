@@ -112,7 +112,7 @@ namespace Net {
      * "UID": UID of the newly created unit
      * "OUID": UID of the owner puppet
      */
-    Unit& _create_unit(std::string model, Puppet& owner);
+    Unit* _create_unit(std::string model, Puppet& owner);
     /*
      * removes a unit from play, and broadcasts a RemoveUnit with the UID
      */

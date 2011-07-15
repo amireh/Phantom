@@ -1,5 +1,5 @@
-local process = function(inCaster, inSpell)
-	Pixy.Log("I'm summoning a Fetish: Herdkeeper!")
+local process = function(inCaster, inTarget, inSpell)
+	Pixy.Log("I'm summoning a Fetish: Playmaker!")
   tolua.cast(inCaster, "Pixy::Puppet")
 
 	if (inCaster:getWP() <= inSpell:getCostWP()) then
@@ -8,17 +8,23 @@ local process = function(inCaster, inSpell)
 	end
 
 	-- create the unit and broadcast it to the players
-  Instance:create_unit("Herdkeeper", inCaster)
+  local unit = Instance:create_unit("Playmaker", inCaster)
 
   -- create the cast spell event
   do
     local evt = Pixy.Event:new()
     evt.UID = Pixy.EventUID.CastSpell
-    evt.Feedback = Pixy.EventFeedback.Ok
+    if (unit) then
+      evt.Feedback = Pixy.EventFeedback.Ok
+    else
+      evt.Feedback = Pixy.EventFeedback.InvalidRequest
+    end
     evt:setProperty("Spell", inSpell:getUID())
     Instance:broadcast(evt)
     evt:delete()
   end
+
+  if (not unit) then return false end
 
   -- update the puppet stats
   do
@@ -35,4 +41,4 @@ local process = function(inCaster, inSpell)
 	return true
 end
 
-subscribeToSpell("Summon: Fetish Herdkeeper", process)
+subscribe_spell("Summon: Fetish Playmaker", process)

@@ -61,6 +61,7 @@ namespace Net {
     void on_cast_spell(const Event&);
     void on_create_unit(const Event&);
     void on_update_puppet(const Event&);
+    void on_update_unit(const Event&);
 
     void on_charge(const Event&);
     void on_cancel_charge(const Event&);
@@ -75,6 +76,7 @@ namespace Net {
     void assign_puppet(Puppet* inPuppet);
     Puppet* get_puppet();
     Puppet* get_puppet(int inUID);
+    Unit* get_unit(int inUID);
 
     CResourceManager rmgr_;
     puppets_t		puppets_;

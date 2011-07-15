@@ -7,7 +7,7 @@ class instance {
   void broadcast(const Pixy::Event&);
   void send(int inPuppetUID, const Pixy::Event&);
 
-  Pixy::Unit& _create_unit @ create_unit(std::string model, Pixy::Puppet& owner);
+  Pixy::Unit* _create_unit @ create_unit(std::string model, Pixy::Puppet& owner);
   void _destroy_unit @ destroy_unit(int inUID);
   void _destroy_unit @ destroy_unit(Pixy::Unit&);
 

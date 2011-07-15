@@ -193,7 +193,7 @@ namespace Net {
       if (puppet->getUID() == inUID)
         return puppet;
 
-    assert(false);
+    throw invalid_uid(std::string("couldn't find a puppet with uid " + stringify(inUID)));
     //return NULL;
   }
 
@@ -212,7 +212,12 @@ namespace Net {
   }
 
   Unit* instance::get_unit(int inUID) {
-    //return units_.find(inUID)->second;
+    for (auto puppet : puppets_)
+      for (auto unit : puppet->getUnits())
+        if (unit->getUID() == inUID)
+          return unit;
+
+    throw invalid_uid(std::string("couldn't find a unit with uid " + stringify(inUID)));
   }
 
   player_cptr instance::get_player(puppet_ptr inPuppet) {
@@ -427,7 +432,10 @@ namespace Net {
     broadcast(evt);
 	}
 
-  Unit& instance::_create_unit(std::string model, Puppet& owner) {
+  Unit* instance::_create_unit(std::string model, Puppet& owner) {
+    if (owner.getUnits().size() >= 10)
+      return 0;
+
     Unit* unit_ = rmgr_.getUnit(model, owner.getRace());
     assert(unit_);
     unit_->setUID(generate_uid());
@@ -437,7 +445,8 @@ namespace Net {
     unit_->toEvent(evt);
     broadcast(evt);
 
-    unit_ = 0;
+    //unit_ = 0;
+    return unit_;
   }
   void instance::_destroy_unit(int inUID) {
   }
@@ -486,6 +495,11 @@ namespace Net {
         << " is trying to end his opponent's turn!";
       return;
     }
+
+    // get up all the opponent units with summoning sickness
+    for (auto unit : waiting_puppet_->getUnits())
+      if (unit->hasSummoningSickness())
+        unit->getUp();
 
 		// is any of its units charging?
     if (!attackers_.empty()) {
@@ -559,16 +573,34 @@ namespace Net {
 		Entity* lCaster = lSpell->getCaster();
 
     assert(lCaster && lSpell);
-
     log_->debugStream() << "spell cast: " << lSpell->getUID() << "#" << lSpell->getName();
     log_->debugStream() << "caster: " << lCaster->getUID() << "#" << lCaster->getName();
-		/*if (!lSpell) {
-		  lSpell = mWaitingPuppet->get_spell(lSpellId);
-		  lCaster = mWaitingPuppet;
-		}*/
+
+    Entity* lTarget = 0;
+    if (inEvt.hasProperty("T")) {
+      try {
+        // is the target a puppet?
+        lTarget = get_puppet(convertTo<int>(inEvt.getProperty("T"))).get();
+        log_->debugStream() << "target: " << lTarget->getUID() << "#" << lTarget->getName();
+      } catch (invalid_uid& e) {
+        try {
+          // a unit?
+          lTarget = get_unit(convertTo<int>(inEvt.getProperty("T")));
+          log_->debugStream() << "target: " << lTarget->getUID() << "#" << lTarget->getName();
+        } catch (invalid_uid& e) {
+          // invalid UID
+          log_->errorStream() << "couldn't find spell target with id " << inEvt.getProperty("T");
+          Event evt(inEvt);
+          reject(evt);
+          return;
+        }
+      }
+
+      assert(lTarget);
+    }
 
 		// dispatch to Lua
-		lua_getfield(lua_, LUA_GLOBALSINDEX, "processSpell");
+		lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 		if(!lua_isfunction(lua_, 1))
 		{
 			log_->errorStream() << "could not find Lua event processor!";
@@ -577,10 +609,11 @@ namespace Net {
 		}
 
 		tolua_pushusertype(lua_,(void*)lCaster,"Pixy::Entity");
+    tolua_pushusertype(lua_,(void*)lTarget,"Pixy::Entity");
 		tolua_pushusertype(lua_,(void*)lSpell,"Pixy::Spell");
 		tolua_pushusertype(lua_,(void*)&inEvt,"Pixy::Event");
 		try {
-			lua_call(lua_, 3, 1);
+			lua_call(lua_, 4, 1);
 		} catch (std::exception& e) {
 			log_->errorStream() << "Lua Handler: " << e.what();
 		}
@@ -594,6 +627,7 @@ namespace Net {
 
     lSpell = 0;
     lCaster = 0;
+    lTarget = 0;
 
 		//return result;
 	}
@@ -626,7 +660,7 @@ namespace Net {
 
     assert(valid); // __DEBUG__
 
-    if (_unit->getAP() <= 0)
+    if (_unit->getBaseAP() <= 0)
       return;
 
     // finally make sure the unit has not already been flagged for attacking

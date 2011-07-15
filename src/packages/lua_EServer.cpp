@@ -1,6 +1,6 @@
 /*
 ** Lua binding: EServer
-** Generated automatically by tolua++-1.0.92 on Sun Jul  3 19:47:08 2011.
+** Generated automatically by tolua++-1.0.92 on Fri Jul 15 15:44:33 2011.
 */
 
 #ifndef __cplusplus
@@ -150,8 +150,8 @@ static int tolua_EServer_Pixy_Net_instance_create_unit00(lua_State* tolua_S)
   if (!self) tolua_error(tolua_S,"invalid 'self' in function '_create_unit'", NULL);
 #endif
   {
-   Pixy::Unit& tolua_ret = (Pixy::Unit&)  self->_create_unit(model,*owner);
-    tolua_pushusertype(tolua_S,(void*)&tolua_ret,"Pixy::Unit");
+   Pixy::Unit* tolua_ret = (Pixy::Unit*)  self->_create_unit(model,*owner);
+    tolua_pushusertype(tolua_S,(void*)tolua_ret,"Pixy::Unit");
   }
  }
  return 1;

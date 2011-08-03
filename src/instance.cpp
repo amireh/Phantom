@@ -480,9 +480,67 @@ namespace Net {
       send(player, evt);
     }
 
+    // remove all expired buffs
+    {
+      std::vector<Spell*> expired;
+      for (auto buff : active_puppet_->getBuffs())
+        if (buff->hasExpired()) {
+          expired.push_back(buff);
+        }
+      for (auto expired_spell : expired)
+        active_puppet_->detachBuff(expired_spell->getUID());
+    }
+
+    // apply all the buffs on the puppet and its units
+    log_->debugStream()
+    << "active puppet " << active_puppet_->getName() << " has "
+    << active_puppet_->getBuffs().size() << " buffs";
+    Event dummy(EventUID::Unassigned);
+    for (auto buff : active_puppet_->getBuffs()) {
+      log_->debugStream() << "applying buff " << buff->getName() << "#" << buff->getUID();
+      lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
+
+      tolua_pushusertype(lua_,(void*)active_puppet_.get(),"Pixy::Puppet");
+      tolua_pushusertype(lua_,(void*)buff->getTarget(),"Pixy::Entity");
+      tolua_pushusertype(lua_,(void*)buff,"Pixy::Spell");
+      tolua_pushusertype(lua_,(void*)&dummy,"Pixy::Event");
+      try {
+        lua_call(lua_, 4, 1);
+      } catch (std::exception& e) {
+        log_->errorStream() << "Lua Handler: " << e.what();
+      }
+      lua_remove(lua_, lua_gettop(lua_));
+    }
+
     // un-rest all the player's resting units
-    for (auto unit : active_puppet_->getUnits())
+    for (auto unit : active_puppet_->getUnits()) {
       unit->getUp();
+      // remove all expired buffs
+      {
+        std::vector<Spell*> expired;
+        for (auto buff : unit->getBuffs())
+          if (buff->hasExpired()) {
+            expired.push_back(buff);
+          }
+        for (auto expired_spell : expired)
+          unit->detachBuff(expired_spell->getUID());
+      }
+      // apply the active buffs
+      for (auto buff : unit->getBuffs()) {
+        lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
+
+        tolua_pushusertype(lua_,(void*)unit,"Pixy::Unit");
+        tolua_pushusertype(lua_,(void*)buff->getTarget(),"Pixy::Entity");
+        tolua_pushusertype(lua_,(void*)buff,"Pixy::Spell");
+        tolua_pushusertype(lua_,(void*)&dummy,"Pixy::Event");
+        try {
+          lua_call(lua_, 4, 1);
+        } catch (std::exception& e) {
+          log_->errorStream() << "Lua Handler: " << e.what();
+        }
+        lua_remove(lua_, lua_gettop(lua_));
+      }
+    }
 
     log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
   }
@@ -597,7 +655,9 @@ namespace Net {
       }
 
       assert(lTarget);
-    }
+      lSpell->setTarget(lTarget);
+    } else
+      lSpell->setTarget(lCaster);
 
 		// dispatch to Lua
 		lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
@@ -621,8 +681,8 @@ namespace Net {
 		bool result = lua_toboolean(lua_, lua_gettop(lua_));
 
 		lua_remove(lua_, lua_gettop(lua_));
-    if (result) {
-      lCaster->detachSpell(lSpell->getUID());
+    if (result) { // don't delete the spell object if it's a buff
+      lCaster->detachSpell(lSpell->getUID(), lSpell->getDuration() == 0);
     }
 
     lSpell = 0;

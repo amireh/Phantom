@@ -30,6 +30,7 @@
 #include <string>
 #include "client_connection.hpp"
 #include "cresource_manager.hpp"
+#include <map>
 
 using boost::asio::ip::tcp;
 namespace Pixy {
@@ -96,6 +97,10 @@ namespace Net {
     static int client_id;
 
     bool odd_;
+
+    void handle_new_turn();
+
+    std::map<Spell*, int> buff_durations_;
   };
 
 }

@@ -222,15 +222,61 @@ namespace Net {
     conn_->send(foo);
   }
 
+  void client::handle_new_turn() {
 
+
+    // remove all expired buffs
+    {
+      std::vector<Spell*> expired;
+      for (auto buff : active_puppet_->getBuffs())
+        if (buff->hasExpired()) {
+          expired.push_back(buff);
+        }
+      for (auto expired_spell : expired)
+        active_puppet_->detachBuff(expired_spell->getUID());
+    }
+    // apply all the buffs on the puppet and its units
+    for (auto buff : active_puppet_->getBuffs()) {
+      /*
+       * Spell: Nourish
+       * Action:
+       *  increase the puppet's HP by 3
+       */
+      if (buff->getName() == "Nourish") {
+        active_puppet_->setHP(active_puppet_->getHP() + 3);
+      }
+
+      // reduce the duration left of the buff, and mark as expired for removal
+      // if it's over
+      buff_durations_.find(buff)->second -= 1;
+      if (buff_durations_.find(buff)->second == 0)
+        buff->setExpired(true);
+    }
+
+    for (auto unit : puppet_->getUnits()) {
+      unit->getUp();
+      // remove all expired buffs
+      {
+        std::vector<Spell*> expired;
+        for (auto buff : unit->getBuffs())
+          if (buff->hasExpired()) {
+            expired.push_back(buff);
+          }
+        for (auto expired_spell : expired)
+          unit->detachBuff(expired_spell->getUID());
+      }
+      for (auto buff : unit->getBuffs()) {
+        // handle buff TODO
+      }
+    }
+  }
   void client::on_start_turn(const Event& evt) {
     waiting_puppet_ = active_puppet_;
     active_puppet_ = puppet_;
 
     conn_->send(evt);
 
-    for (auto unit : puppet_->getUnits())
-      unit->getUp();
+    handle_new_turn();
 
     // cast a spell
     if (!puppet_->getHand().empty())
@@ -267,8 +313,7 @@ namespace Net {
     active_puppet_ = get_puppet(convertTo<int>(evt.getProperty("Puppet")));
     assert(active_puppet_);
 
-    for (auto unit : active_puppet_->getUnits())
-      unit->getUp();
+    handle_new_turn();
   }
 
   void client::on_draw_spells(const Event& evt) {
@@ -377,28 +422,60 @@ namespace Net {
         break;
       } catch (...) { _spell = 0; }
     assert(_spell && _puppet);
+
+
     // ...
-    if (_spell->getName() == "Chains of Command") {
-      Unit* _unit = 0;
-      for (auto puppet : puppets_)
-        for (auto unit : puppet->getUnits()) {
-          if (unit->getUID() == convertTo<int>(evt.getProperty("T"))) {
-            _unit = unit;
-            break;
-          }
-        }
-      assert(_unit);
 
-
-      ((Puppet*)_unit->getOwner())->detachUnit(_unit->getUID(), false);
-      _puppet->attachUnit(_unit);
-
-      std::cout << "**MIND CONTROLLED! Unit: " << _unit->getName() << "#"<<_unit->getUID()
-      <<"is now owned by " <<_puppet->getName()<<"#"<<_puppet->getUID()<<"\n";
+    // if it's a buff, track its duration
+    if (_spell->getDuration() > 0) {
+      buff_durations_.insert(std::make_pair(_spell, _spell->getDuration()));
     }
+
+    /*
+     * Spell: Chains of Command
+     * Action:
+     *  detach target unit from its current owner
+     *  and move ownership to the caster puppet
+     */
+    {
+      if (_spell->getName() == "Chains of Command") {
+        Unit* _unit = 0;
+        for (auto puppet : puppets_)
+          for (auto unit : puppet->getUnits()) {
+            if (unit->getUID() == convertTo<int>(evt.getProperty("T"))) {
+              _unit = unit;
+              break;
+            }
+          }
+        assert(_unit);
+
+        ((Puppet*)_unit->getOwner())->detachUnit(_unit->getUID(), false /* don't delete */);
+        _puppet->attachUnit(_unit);
+
+        std::cout
+          << "**MIND CONTROLLED! Unit: " << _unit->getName() << "#"<<_unit->getUID()
+          <<"is now owned by " <<_puppet->getName()<<"#"<<_puppet->getUID()<<"\n";
+      }
+    } // end of Spell: Chains of Command
+
+    /*
+     * Spell: Nourish
+     * Action:
+     *  attach the spell as a buff
+     */
+    {
+      if (_spell->getName() == "Nourish") {
+        _puppet->attachBuff(_spell);
+        _spell->setExpired(false);
+
+        std::cout
+          << "**NOURISH! Puppet: " << _puppet->getName() << "#"<<_puppet->getUID() << "\n";
+      }
+    } // end of Spell: Chains of Command
+
     std::cout << "casted a spell! " << _spell->getName() << "#" << _spell->getUID() << "\n";
     // remove it from the puppet's hand
-    _puppet->detachSpell(_spell->getUID());
+    _puppet->detachSpell(_spell->getUID(), _spell->getDuration() == 0 /* delete only if it's not a buff */);
   }
 
   void client::on_create_unit(const Event& evt) {

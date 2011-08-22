@@ -293,8 +293,8 @@ namespace Net {
       std::string talent_names = "";
       for (lTalent = lTalents.begin(); lTalent != lTalents.end(); ++lTalent)
         talent_names += (*lTalent)->getName() + ",";
-
-      talent_names = talent_names.erase(talent_names.size()-1,1);
+      if (lTalents.size() > 0)
+        talent_names = talent_names.erase(talent_names.size()-1,1);
       out << talent_names << ";\n";
 
       // dump puppet decks

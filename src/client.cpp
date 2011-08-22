@@ -34,7 +34,7 @@ namespace Net {
   client::client(boost::asio::io_service& io_service, bool oddOrEven)
     : io_service_(io_service),
       odd_(oddOrEven),
-      conn_(new connection(io_service, "127.0.0.1", "60100")),
+      conn_(new connection(io_service, "192.168.1.101", "60100")),
       timer_(io_service_),
       puppet_(0),
       active_puppet_(0),

@@ -35,6 +35,7 @@ namespace Net {
 
   server::server()
     : io_service_(),
+      work_(io_service_),
       thread_pool_size_(4),
       acceptor_(io_service_),
       new_connection_(new connection(io_service_)),
@@ -51,7 +52,7 @@ namespace Net {
 
     // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
     boost::asio::ip::tcp::resolver resolver(io_service_);
-    boost::asio::ip::tcp::resolver::query query("192.168.1.101"/*SERVER_ADDRESS*/, SERVER_PORT);
+    boost::asio::ip::tcp::resolver::query query("0.0.0.0"/*SERVER_ADDRESS*/, SERVER_PORT);
     boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
     acceptor_.open(endpoint.protocol());
     acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
@@ -214,11 +215,13 @@ namespace Net {
   }
 
   void server::work() {
-    //try {
+    try {
       io_service_.run();
-    //} catch (std::exception& e) {
-    //  std::cerr << "an exception caught in a worker, aborting: " << e.what() << "\n";
-    //}
+    } catch (std::exception& e) {
+      std::cerr << "an exception caught in a worker, aborting: " << e.what() << "\n";
+    }
+    
+    std::cout << "worker thread exiting\n";
   }
 
   void server::stop() {
@@ -279,6 +282,8 @@ namespace Net {
     {
       connections.push_back(new_connection_);
       ++nr_connections_;
+      
+      log_->debugStream() << "a guest has connected";
 
       new_connection_->start();
       new_connection_.reset(new connection(io_service_));

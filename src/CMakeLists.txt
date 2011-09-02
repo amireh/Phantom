@@ -1,12 +1,8 @@
 # add sources
 SET(Project_SRCS
-  #base_connection.cpp
   server_connection.cpp
   server.cpp
-  #message_parser.cpp
-  #dispatcher.cpp
   server_main.cpp
-  #event.cpp
   db_manager.cpp
   player.cpp
   sresource_manager.cpp

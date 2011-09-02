@@ -131,6 +131,7 @@ namespace Net {
     boost::thread_group workers;
 
     boost::asio::io_service io_service_;
+    boost::asio::io_service::work work_;
     boost::asio::ip::tcp::acceptor acceptor_;
     boost::asio::strand strand_;
 

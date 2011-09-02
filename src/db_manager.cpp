@@ -57,7 +57,7 @@ namespace Net {
 		}
 
 		// prompt password
-		std::string inPW = "tuonela";
+		std::string inPW = "eleTuonela89";
 		/*
 		 std::cout << "| Enter database pw: ";
 		std::cin >> inPW;

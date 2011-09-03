@@ -124,16 +124,14 @@ namespace Net {
     void refresh_timer();
 
 
-
+    boost::asio::io_service io_service_;
+    //~ boost::asio::io_service::work work_;
+    boost::asio::ip::tcp::acceptor acceptor_;
+    boost::asio::strand strand_;
 
     // the number of threads that will call io_service::run()
     const std::size_t thread_pool_size_;
     boost::thread_group workers;
-
-    boost::asio::io_service io_service_;
-    boost::asio::io_service::work work_;
-    boost::asio::ip::tcp::acceptor acceptor_;
-    boost::asio::strand strand_;
 
     /// The next connection to be accepted.
     connection_ptr new_connection_;
@@ -148,8 +146,8 @@ namespace Net {
     log4cpp::Category* log_category_;
     log4cpp::Category	*log_;
 
-    boost::asio::deadline_timer ping_timer_;
     const int ping_interval;
+    boost::asio::deadline_timer ping_timer_;
 
     db_manager* dbmgr_;
     sresource_manager *resmgr_;

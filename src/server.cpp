@@ -35,34 +35,25 @@ namespace Net {
 
   server::server()
     : io_service_(),
-      work_(io_service_),
-      thread_pool_size_(4),
       acceptor_(io_service_),
-      new_connection_(new connection(io_service_)),
-      ping_timer_(io_service_),
       strand_(io_service_),
+      //~ work_(io_service_),
+      thread_pool_size_(4),
+
+      new_connection_(),
+      nr_connections_(0),
+
       ping_interval(5),
+      ping_timer_(io_service_),
+
       dbmgr_(0),
       resmgr_(0),
       match_finder_(0),
-      nr_connections_(0),
+
+      new_instance_(),
       nr_instances_(0)
   {
     time(&uptime);
-
-    // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
-    boost::asio::ip::tcp::resolver resolver(io_service_);
-    boost::asio::ip::tcp::resolver::query query("0.0.0.0"/*SERVER_ADDRESS*/, SERVER_PORT);
-    boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
-    acceptor_.open(endpoint.protocol());
-    acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-    acceptor_.bind(endpoint);
-    acceptor_.listen();
-
-    // accept connections
-    acceptor_.async_accept(
-      new_connection_->socket(),
-      boost::bind(&server::handle_accept, this, boost::asio::placeholders::error));
 
   }
 
@@ -173,6 +164,33 @@ namespace Net {
   }
   void server::run()
   {
+
+    resolve_paths();
+    init_logger();
+
+    std::string _ip("192.168.1.101");
+    std::string _port(SERVER_PORT);
+
+    std::cout << "-+-+-+-+-+-+ Elementum Server +-+-+-+-+-+-\n";
+    std::cout << "Binding at: " << _ip << ":" << _port << "\n";
+    std::cout << "-+-+-+-+\n";
+
+    new_connection_.reset(new connection(io_service_));
+
+    // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
+    boost::asio::ip::tcp::resolver resolver(io_service_);
+    boost::asio::ip::tcp::resolver::query query(_ip/*SERVER_ADDRESS*/, _port);
+    boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
+    acceptor_.open(endpoint.protocol());
+    acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+    acceptor_.bind(endpoint);
+    acceptor_.listen();
+
+    // accept connections
+    acceptor_.async_accept(
+      new_connection_->socket(),
+      boost::bind(&server::handle_accept, this, boost::asio::placeholders::error));
+
     //signal(SIGUSR1, &server::dump_stats);
     signal(SIGUSR1, &catch_sigusr);
     for (std::size_t i = 0; i < thread_pool_size_; ++i)
@@ -182,9 +200,6 @@ namespace Net {
       << "Server up, accepting connections on " << thread_pool_size_ << " threads\n";
     std::cout
       << "Messages header length: " << Event::HeaderLength << ", footer length: " << Event::FooterLength << "\n";
-
-    resolve_paths();
-    init_logger();
 
     dbmgr_ = new db_manager(io_service_);
     dbmgr_->connect();
@@ -211,16 +226,20 @@ namespace Net {
       delete log_layout_;
       delete log_;
     }
+
     log4cpp::Category::shutdown();
+
+    //~ throw std::runtime_error("shouldn't be here, all workers are dead!");
   }
 
   void server::work() {
-    try {
+    //~ try {
       io_service_.run();
-    } catch (std::exception& e) {
-      std::cerr << "an exception caught in a worker, aborting: " << e.what() << "\n";
-    }
-    
+    //~ } catch (std::exception& e) {
+      //~ std::cerr << "an exception caught in a worker, aborting: " << e.what() << "\n";
+      //~ throw e;
+    //~ }
+
     std::cout << "worker thread exiting\n";
   }
 
@@ -282,7 +301,7 @@ namespace Net {
     {
       connections.push_back(new_connection_);
       ++nr_connections_;
-      
+
       log_->debugStream() << "a guest has connected";
 
       new_connection_->start();
@@ -290,6 +309,9 @@ namespace Net {
       acceptor_.async_accept(new_connection_->socket(),
           boost::bind(&server::handle_accept, this,
             boost::asio::placeholders::error));
+    } else {
+      log_->errorStream() << "couldn't accept connection! " << e << "\n";
+      throw std::runtime_error("unable to accept connection!");
     }
   }
 

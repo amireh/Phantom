@@ -1,6 +1,6 @@
 # add sources
 SET(Project_SRCS
-
+  base_connection.cpp
   server_connection.cpp
   server.cpp
   server_main.cpp

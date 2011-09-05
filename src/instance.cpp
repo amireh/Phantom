@@ -540,7 +540,18 @@ namespace Net {
         }
         lua_remove(lua_, lua_gettop(lua_));
       }
+
+      // charge with all the Restless units
+      {
+        if (unit->isRestless()) {
+          Event e(EventUID::Charge, EventFeedback::Ok);
+          e.setProperty("UID", unit->getUID());
+          on_charge(e);
+        }
+      }
     }
+
+
 
     log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
   }
@@ -760,6 +771,7 @@ namespace Net {
       }
 
     assert(_found);
+    assert(!_unit->isRestless()); // Restless units can't not charge
 
     attackers_.remove(_unit);
 
@@ -795,8 +807,8 @@ namespace Net {
 
     assert(valid);
 
-    // is the blocker resting?
-    valid = !blocker->isResting();
+    // is the blocker resting? is the attacker unblockable?
+    valid = !blocker->isResting() && !attacker->isUnblockable();
 
     assert(valid);
 
@@ -901,7 +913,7 @@ namespace Net {
           }
 
         }
-      } else {
+      } else { // no blockers
         std::cout
           << "attacker " << attacker->getUID()
           << " is attacking puppet " << waiting_puppet_->getName()

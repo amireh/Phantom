@@ -62,14 +62,18 @@ namespace Net {
       }
 
       // minions
-      lRecords = txn.exec("SELECT * FROM minions");
+      lRecords = txn.exec(
+        "select name,race,faction, ap, hp, upkeep, \
+        is_team_attacker, is_unblockable, is_restless, is_flying, \
+        is_trampling, has_first_strike, has_lifetap, description \
+        from minions");
       {
         lDump << "[minions];" << lRecords.size() << "\n";
-        int nrFields = 12;
+        int nrFields = 14;
         std::string lFields[] =
         {"name", "race", "faction", "ap", "hp", "upkeep", "is_team_attacker",
          "is_unblockable", "is_restless", "is_flying", "is_trampling",
-         "description"};
+         "has_first_strike", "has_lifetap", "description"};
         for (lRecord = lRecords.begin(); lRecord != lRecords.end(); ++lRecord) {
           lDump << "$";
           for (int i=0; i < nrFields; ++i)
@@ -226,49 +230,6 @@ namespace Net {
   int sresource_manager::get_raw_game_data_size() {
     return raw_game_data_size_;
   }
-
-#if 0
-  void sresource_manager::puppetToStream(BitStream& out, const Puppet& inPuppet) {
-    list<Puppet const*> puppets;
-    puppets.push_back(&inPuppet);
-
-    this->puppetsToStream(out, puppets);
-  }
-
-  void sresource_manager::puppetsToStream(BitStream& out, const list<Puppet const*>& inPuppets) {
-    // dump it
-    std::ostringstream raw;
-    puppetsToStream(raw, inPuppets);
-    int rawSize = raw.str().size();
-
-    // compress it
-    vector<unsigned char> tmp;
-    string rawtmp(raw.str());
-    vector<unsigned char> vraw(rawtmp.begin(), rawtmp.end());
-
-    Archiver::encodeLzma(tmp, vraw);
-    string encoded(tmp.begin(), tmp.end());
-    tmp.clear();
-    vraw.clear();
-    rawtmp.clear();
-
-    // hash it
-    const char *sum = MD5((unsigned char*)encoded.c_str()).hex_digest();
-
-    /*std::cout << "size of raw data: " << rawSize << "\n";
-    std::cout << "size of compressed data: " << encoded.size() << "\n";
-    std::cout << "sum: " << sum << "\n";
-    std::cout << raw.str();
-    std::cout << "compressed data: " << encoded << "\n----\n";*/
-
-		out.Reset();
-		out.AssertStreamEmpty();
-    out.Write((unsigned char)ID_FETCH_PUPPETS);
-    out.Write(sum, strlen(sum));
-    out.Write<int>(rawSize);
-    out.Write(encoded.c_str(), encoded.size());
-  }
-#endif
 
   void sresource_manager::puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets) {
     std::ostringstream lDeckStream;

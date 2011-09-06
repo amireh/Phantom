@@ -929,14 +929,14 @@ namespace Net {
     }
     log_->debugStream() << "calculating battle results";
 
+    // rest what's left of the attackers
+    for (auto unit : attackers_)
+      unit->rest();
+
     // clean up dead units
     log_->debugStream() << death_list_.size() << " dead units";
     for (auto unit : death_list_)
       static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
-
-    // rest attackers
-    for (auto unit : attackers_)
-      unit->rest();
 
     // clear combat temps
     death_list_.clear();

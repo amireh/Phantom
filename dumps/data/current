@@ -1,0 +1,35 @@
+[spells];15
+$Chains of Command;0;0;16;0;1;t;t;0;Break the target enemy minion's will, binding it to your will. Lasts until dispelled.;
+$Nourish;0;3;12;0;1;t;f;0;Regenerates your puppet's HP by 3 per turn for three turns.;
+$Fartigue;0;2;12;0;1;t;t;0;Plague the target with odor unheavenly, bursting them for 2 damage points and 1 each turn for two consecutive turns.;
+$Summon: Skelly Peasant;0;0;4;0;0;f;f;0;Placeholder;
+$Hysteria;3;1;0;0;1;f;t;2;Uncover the Herdkeeper's true face, effectively rendering the target enemy puppet or minion vulnerable for the whole turn, taking twice the damage dealt against them.;
+$Comet;3;0;8;0;1;f;t;0;Call down a boulder of molten fury upon the selected target.;
+$Summon: Skelly Warrior;0;0;12;0;0;f;f;0;Placeholder;
+$Summon: Skelly Pirate;0;0;18;0;0;f;f;0;Placeholder;
+$Summon: Skelly Nully;0;0;18;0;0;f;f;0;Placeholder;
+$Summon: Fetish Zij;3;0;8;0;0;f;f;0;Calls upon the spirit of the ferocious Fetish Zij, binding it to the caster's will.;
+$Summon: Fetish Hurler;3;0;4;0;0;f;f;0;Summon this ancient being to launch your Fetish Zij into weapons of utter mayhem!;
+$Summon: Fetish Herdkeeper;3;0;8;0;0;f;f;0;The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living;
+$Summon: Fetish Playmaker;3;0;10;0;0;f;f;0;Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.;
+$Hurl Zij;3;0;0;0;1;f;t;2;Launch a Fetish Zij under your control against a target enemy puppet or minion, dealing twice the damage of the Fetish Zij while killing it in the process.;
+$Reanimate;3;0;12;0;1;f;t;0;Raise a dead Fetish Zij in your graveyard back into play.;
+[minions];8
+$Hurler;3;Fetish;0;2;4;f;f;f;f;f;f;f;Fear and sheer strength is what controls the Hurlers, they would rather sacrifice any comrade than facing a possibility of death, or... worse.;
+$Playmaker;3;Fetish;0;4;6;f;f;f;f;f;f;f;The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living.;
+$Skelly Warrior;0;Skelly;2;2;0;f;f;t;f;f;t;f;Placeholder;
+$Zij;3;Fetish;4;1;2;f;f;f;f;t;f;f;The Zij are the most fragile of the Fetish, their power lies in their naive negligence of their value: they like to implode;
+$Herdkeeper;3;Fetish;1;6;8;f;t;t;f;f;f;f;Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.;
+$Skelly Pirate;0;Skelly;5;1;0;f;f;f;f;f;f;t;Placeholder;
+$Skelly Nully;0;Skelly;1;6;0;f;f;f;f;f;f;f;Placeholder;
+$Skelly Peasant;0;Skelly;1;1;4;f;f;f;f;f;f;f;Placeholder;
+[minion spells];3
+$Playmaker;Reanimate;
+$Herdkeeper;Hysteria;
+$Hurler;Hurl Zij;
+[talents]; 4
+$Improved Earthling;0;0;;Improve your something to genuinely impress the ladies.;
+$Bad Mojo;3;2;{"Improved Mojo"};Badass stuff.;
+$Improved Mojo;3;1;;Improve your mojo.;
+$Very Bad Mojo;3;2;{"Improved Mojo","Bad Mojo"};The baddest stuff.;
+/elementum/

@@ -1,20 +1,23 @@
 local turns_left = 0
 local apply_buff = function(inCaster, inSpell)
   Pixy.Log("Applying Nourish on " .. inCaster:getName() .. "#" .. inCaster:getUID() .. "!")
+
+  --[[
   if (inCaster:getWP() <= inSpell:getCostWP()) then
 	  Pixy.Log("ERROR! Puppet doesn't have enough WP to cast!")
 	  return false
 	end
+  ]]--
 
   -- create the cast spell event
-  do
-    local evt = Pixy.Event:new()
-    evt.UID = Pixy.EventUID.CastSpell
-    evt.Feedback = Pixy.EventFeedback.Ok
-    evt:setProperty("Spell", inSpell:getUID())
-    Instance:broadcast(evt)
-    evt:delete()
-  end
+  --~ do
+    --~ local evt = Pixy.Event:new()
+    --~ evt.UID = Pixy.EventUID.CastSpell
+    --~ evt.Feedback = Pixy.EventFeedback.Ok
+    --~ evt:setProperty("Spell", inSpell:getUID())
+    --~ Instance:broadcast(evt)
+    --~ evt:delete()
+  --~ end
 
   -- attach the buff to the puppet
   inCaster:attachBuff(inSpell)
@@ -22,16 +25,16 @@ local apply_buff = function(inCaster, inSpell)
   inSpell:setExpired(false)
 
   -- update the puppet stats
-  do
-    inCaster:setWP(inCaster:getWP() - inSpell:getCostWP())
-    local evt = Pixy.Event:new()
-    evt.UID = Pixy.EventUID.UpdatePuppet
-    evt.Feedback = Pixy.EventFeedback.Ok
-    evt:setProperty("UID", inCaster:getUID())
-    evt:setProperty("WP", inCaster:getWP())
-    Instance:broadcast(evt)
-    evt:delete()
-  end
+  --~ do
+    --~ inCaster:setWP(inCaster:getWP() - inSpell:getCostWP())
+    --~ local evt = Pixy.Event:new()
+    --~ evt.UID = Pixy.EventUID.UpdatePuppet
+    --~ evt.Feedback = Pixy.EventFeedback.Ok
+    --~ evt:setProperty("UID", inCaster:getUID())
+    --~ evt:setProperty("WP", inCaster:getWP())
+    --~ Instance:broadcast(evt)
+    --~ evt:delete()
+  --~ end
 
   return true
 end

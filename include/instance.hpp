@@ -125,6 +125,8 @@ namespace Net {
 
 		void init_lua();
 
+    bool pass_to_lua(const char* inFunc, int argc, ...);
+
 		/*! \brief
 		 *	"subscribes" a player as a participant in this instance, subscribed
 		 *	players will receive events from this instance

@@ -2,6 +2,9 @@ package.path = ";;./?.lua;../resources/scripts/?.lua;"
 
 Pixy.Server = {}
 local Handlers = {}
+pixy = {}
+
+require "turns"
 
 function list_iter(t)
   local i = 0
@@ -56,4 +59,8 @@ function register_instance(inInstance)
       require(stripped_name)
     end
   end
+end
+
+function arbitrary(func, ...)
+  pixy[func](unpack(arg))
 end

@@ -483,6 +483,37 @@ namespace Net {
     static_cast<Puppet*>(inUnit->getOwner())->detachUnit(inUnit->getUID());
   }
 
+  bool instance::pass_to_lua(const char* inFunc, int argc, ...) {
+    va_list argp;
+    va_start(argp, argc);
+
+		lua_getfield(lua_, LUA_GLOBALSINDEX, "arbitrary");
+		if(!lua_isfunction(lua_, 1))
+		{
+			log_->errorStream() << "could not find Lua arbitrary functor!";
+			lua_pop(lua_,1);
+			return true;
+		}
+
+    lua_pushfstring(lua_, inFunc);
+    for (int i=0; i < argc; ++i) {
+      const char* argtype = (const char*)va_arg(argp, const char*);
+      void* argv = (void*)va_arg(argp, void*);
+      tolua_pushusertype(lua_,argv,argtype);
+    }
+
+		try {
+			lua_call(lua_, argc+1, 1);
+		} catch (std::exception& e) {
+			log_->errorStream() << "Lua Handler: " << e.what();
+		}
+
+		bool result = lua_toboolean(lua_, lua_gettop(lua_));
+		lua_remove(lua_, lua_gettop(lua_));
+
+    va_end(argp);
+    return result;
+  }
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Event Handlers
@@ -500,6 +531,8 @@ namespace Net {
   void instance::on_start_turn(const Event& inEvt) {
     // start timer and shizzle
 
+    pass_to_lua("tick_turn", 0);
+
     // send to all players except the active one
     Event evt(EventUID::TurnStarted);
     evt.setProperty("Puppet", stringify(active_puppet_->getUID()));
@@ -509,6 +542,21 @@ namespace Net {
         continue;
 
       send(player, evt);
+    }
+
+    // update the hero's channels and willpower
+    {
+      pass_to_lua("tick_resources", 1, "Pixy::Puppet", active_puppet_.get());
+      /*
+      active_puppet_->setChannels(active_puppet_->getChannels() + 1);
+      active_puppet_->setWP(active_puppet_->getChannels());
+
+      Event evt(EventUID::UpdatePuppet, EventFeedback::Ok);
+      evt.setProperty("UID", active_puppet_->getUID());
+      evt.setProperty("Channels", active_puppet_->getChannels());
+      evt.setProperty("WP", active_puppet_->getWP());
+      broadcast(evt);
+      */
     }
 
     // remove all expired buffs
@@ -758,6 +806,42 @@ namespace Net {
       lSpell->setTarget(lCaster);
     }
 
+    // verify the caster having enough resources to cast the spell
+    {
+      bool valid = true;
+      if (lCaster->getRank() == PUPPET)
+      {
+        if (lSpell->getCostWP() > ((Puppet*)lCaster)->getWP())
+          valid = valid && false;
+
+        // heroes can't have less than 1 channel
+        if (lSpell->getCostChannels() >= ((Puppet*)lCaster)->getChannels())
+          valid = valid && false;
+      }
+
+      if (lSpell->getCostHP() > lCaster->getHP())
+        valid = valid && false;
+
+
+      if (!valid)
+      {
+        if (lCaster->getRank() == PUPPET)
+        {
+          Puppet* tCaster = (Puppet*)lCaster;
+          log_->errorStream()
+            << "caster" << tCaster->getUID()
+            << " failed the resources requirements of the spell" << lSpell->getUID()
+            << " : \t "
+            << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":" << lSpell->getCostChannels()
+            << " vs "
+            << tCaster->getWP() << ":" << tCaster->getHP() << ":" << tCaster->getChannels();
+        }
+
+        Event e(inEvt);
+        return reject(e);
+      }
+    }
+
 		// dispatch to Lua
 		lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 		if(!lua_isfunction(lua_, 1))
@@ -780,8 +864,62 @@ namespace Net {
 		bool result = lua_toboolean(lua_, lua_gettop(lua_));
 
 		lua_remove(lua_, lua_gettop(lua_));
-    if (result) { // don't delete the spell object if it's a buff
+
+    // if the spell cast was successful, we first broadcast the command to
+    // the clients, then detach the spell from the caster, and finally
+    // we apply any resource changes to the caster and broadcast them too
+    if (result) {
+
+      // broadcast the CastSpell event to players, confirming it
+      {
+        Event evt(EventUID::CastSpell, EventFeedback::Ok);
+        evt.setProperty("Spell", lSpell->getUID());
+        if (lSpell->requiresTarget())
+          evt.setProperty("T", lTarget->getUID());
+
+        broadcast(evt);
+      }
+
+      // don't delete the spell object if it's a buff
       lCaster->detachSpell(lSpell->getUID(), lSpell->getDuration() == 0);
+
+      // update the caster stats and broadcast them
+      {
+        Event evt(EventUID::Unassigned, EventFeedback::Ok);
+        evt.setProperty("UID", lCaster->getUID());
+
+        if (lCaster->getRank() == PUPPET)
+        {
+          Puppet* tCaster = (Puppet*)lCaster;
+          evt.UID = EventUID::UpdatePuppet;
+          // apply WP cost, if any
+          if (lSpell->getCostWP() > 0) {
+            tCaster->setWP(tCaster->getWP() - lSpell->getCostWP());
+            evt.setProperty("WP", tCaster->getWP());
+          }
+          // apply the Channels cost, if any
+          if (lSpell->getCostChannels() > 0) {
+            tCaster->setChannels(tCaster->getChannels() - lSpell->getCostChannels());
+            evt.setProperty("Channels", tCaster->getChannels());
+          }
+        } else
+          evt.UID = EventUID::UpdateUnit;
+
+        // apply HP cost, if any
+        if (lSpell->getCostHP() > 0) {
+          lCaster->setHP(lCaster->getHP() - lSpell->getCostHP());
+          evt.setProperty("HP", lCaster->getHP());
+        }
+
+        broadcast(evt);
+      }
+
+
+    } else {
+      // we reject the request
+      Event evt(EventUID::CastSpell, EventFeedback::InvalidRequest);
+      evt.setProperty("Spell", lSpell->getUID());
+      broadcast(evt);
     }
 
     lSpell = 0;

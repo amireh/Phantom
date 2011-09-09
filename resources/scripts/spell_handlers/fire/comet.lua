@@ -3,7 +3,8 @@ local process = function(inCaster, inTarget, inSpell)
 	Pixy.Log("Casting Comet on " .. inTarget:getName() .. "#" .. inTarget:getUID() .. " by " .. inCaster:getUID() .. "!")
   tolua.cast(inCaster, "Pixy::Puppet")
 
-	if (inCaster:getWP() <= inSpell:getCostWP()) then
+  --[[
+  if (inCaster:getWP() <= inSpell:getCostWP()) then
 	  Pixy.Log("ERROR! Puppet doesn't have enough WP to cast!")
 	  return false
 	end
@@ -12,6 +13,7 @@ local process = function(inCaster, inTarget, inSpell)
     Pixy.Log("ERROR! Casting Comet without a target!")
     return false
   end
+  --]]
 
   if (inTarget:getUID() == inCaster:getUID()) then
     Pixy.Log("ERROR! Caster is casting Comet on self!")
@@ -19,28 +21,28 @@ local process = function(inCaster, inTarget, inSpell)
   end
 
   -- create the cast spell event
-  do
-    local evt = Pixy.Event:new()
-    evt.UID = Pixy.EventUID.CastSpell
-    evt.Feedback = Pixy.EventFeedback.Ok
-    evt:setProperty("Spell", inSpell:getUID())
-    evt:setProperty("T", inTarget:getUID())
-    Instance:broadcast(evt)
-    evt:delete()
-  end
+  --~ do
+    --~ local evt = Pixy.Event:new()
+    --~ evt.UID = Pixy.EventUID.CastSpell
+    --~ evt.Feedback = Pixy.EventFeedback.Ok
+    --~ evt:setProperty("Spell", inSpell:getUID())
+    --~ evt:setProperty("T", inTarget:getUID())
+    --~ Instance:broadcast(evt)
+    --~ evt:delete()
+  --~ end
 
   -- update the puppet stats
-  do
-    inCaster:setWP(inCaster:getWP() - inSpell:getCostWP())
-
-    local evt = Pixy.Event:new()
-    evt.UID = Pixy.EventUID.UpdatePuppet
-    evt.Feedback = Pixy.EventFeedback.Ok
-    evt:setProperty("UID", inCaster:getUID())
-    evt:setProperty("WP", inCaster:getWP())
-    Instance:broadcast(evt)
-    evt:delete()
-  end
+  --~ do
+    --~ inCaster:setWP(inCaster:getWP() - inSpell:getCostWP())
+--~
+    --~ local evt = Pixy.Event:new()
+    --~ evt.UID = Pixy.EventUID.UpdatePuppet
+    --~ evt.Feedback = Pixy.EventFeedback.Ok
+    --~ evt:setProperty("UID", inCaster:getUID())
+    --~ evt:setProperty("WP", inCaster:getWP())
+    --~ Instance:broadcast(evt)
+    --~ evt:delete()
+  --~ end
 
   -- update the target stats
   do

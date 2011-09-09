@@ -44,6 +44,10 @@ local process_buff = function(inCaster, inTarget, inSpell)
   Pixy.Log("Processing Fartigue on " .. inCaster:getName() .. "#" .. inCaster:getUID() .. "!")
   inTarget:setHP(inTarget:getHP() - 2)
 
+  if (inTarget:isDead()) then
+    return true
+  end
+
   turns_left = turns_left - 1
   -- remove spell when the duration expires
   if (turns_left == 0) then

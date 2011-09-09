@@ -445,13 +445,44 @@ namespace Net {
     unit_->toEvent(evt);
     broadcast(evt);
 
+    log_->debugStream() << "creating unit named " << model
+      << ", owner now has " << owner.getUnits().size() << " units under control";
+
     //unit_ = 0;
     return unit_;
   }
   void instance::_destroy_unit(int inUID) {
+    Unit* unit = 0;
+    for (auto puppet : puppets_)
+    {
+      try {
+        unit = puppet->getUnit(inUID);
+        death_list_.push_back(unit);
+        //strand_.post([&, puppet, inUID]() -> void {
+          puppet->detachUnit(inUID);
+
+          // tell clients to remove this unit
+          Event e(EventUID::RemoveUnit, EventFeedback::Ok);
+          e.setProperty("UID", inUID);
+          broadcast(e);
+
+          log_->debugStream() << "unit with UID " << inUID << " is dead";
+        //});
+        return;
+      } catch (invalid_uid& e) { }
+    }
+
+    // can't be here
+    assert(false);
   }
-  void instance::_destroy_unit(Unit&) {
+  void instance::_destroy_unit(Unit* inUnit) {
+    // tell clients to remove this unit
+    Event e(EventUID::RemoveUnit, EventFeedback::Ok);
+    e.setProperty("UID", inUnit->getUID());
+    broadcast(e);
+    static_cast<Puppet*>(inUnit->getOwner())->detachUnit(inUnit->getUID());
   }
+
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Event Handlers
@@ -495,6 +526,7 @@ namespace Net {
     log_->debugStream()
     << "active puppet " << active_puppet_->getName() << " has "
     << active_puppet_->getBuffs().size() << " buffs";
+
     Event dummy(EventUID::Unassigned);
     for (auto buff : active_puppet_->getBuffs()) {
       log_->debugStream() << "applying buff " << buff->getName() << "#" << buff->getUID();
@@ -510,7 +542,28 @@ namespace Net {
         log_->errorStream() << "Lua Handler: " << e.what();
       }
       lua_remove(lua_, lua_gettop(lua_));
+
+      // if a puppet is dead, the game is over
+      if (active_puppet_->isDead())
+      {
+        return _destroy_puppet(active_puppet_->getUID());
+      }
+      // if the debuff's target was a puppet and it died, game is also over
+      else if (buff->getTarget()->getRank() == Pixy::PUPPET
+        && buff->getTarget()->isDead())
+      {
+        return _destroy_puppet(buff->getTarget()->getUID());
+      }
+      else if (buff->getTarget()->isDead())
+        death_list_.push_back((Unit*)buff->getTarget());
     }
+
+    // kill all the units in the death list
+    for (auto unit : death_list_)
+      _destroy_unit(unit);
+      //static_cast<Puppet*>(unit->getOwner())->detachUnit(unit->getUID());
+
+    death_list_.clear();
 
     // un-rest all the player's resting units
     for (auto unit : active_puppet_->getUnits()) {
@@ -539,19 +592,38 @@ namespace Net {
           log_->errorStream() << "Lua Handler: " << e.what();
         }
         lua_remove(lua_, lua_gettop(lua_));
-      }
 
-      // charge with all the Restless units
-      {
+        // check if either the caster or the target of the buff are dead
+        if (buff->getTarget()->isDead()) {
+          // if the target was a puppet and it died, game is over
+          if (buff->getTarget()->getRank() == Pixy::PUPPET)
+          {
+            return _destroy_puppet(buff->getTarget()->getUID());
+          }
+          else // just mark the unit for death
+            death_list_.push_back((Unit*)buff->getTarget());
+        }
+        else if (unit->isDead())
+          death_list_.push_back(unit);
+      }
+    }
+
+    // again, kill all the units in the death list
+    for (auto unit : death_list_)
+      _destroy_unit(unit);
+      //static_cast<Puppet*>(unit->getOwner())->detachUnit(unit->getUID());
+
+    death_list_.clear();
+
+    // charge with all the Restless units
+    {
+      for (auto unit : active_puppet_->getUnits())
         if (unit->isRestless()) {
           Event e(EventUID::Charge, EventFeedback::Ok);
           e.setProperty("UID", unit->getUID());
           on_charge(e);
         }
-      }
     }
-
-
 
     log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
   }
@@ -721,10 +793,12 @@ namespace Net {
       std::cout << "\t+" << unit->getUID() << "#" << unit->getName() << "\n";
 
 
-    //~ if (!valid)
-      //~ return;
+    if (!valid) {
+      log_->errorStream() << "invalid charge attempt, uid: " << evt.getProperty("UID");
+      return;
+    }
 
-    assert(valid); // __DEBUG__
+    //assert(valid); // __DEBUG__
 
     // make sure the unit is not resting
     valid = !_unit->isResting();
@@ -936,7 +1010,8 @@ namespace Net {
     // clean up dead units
     log_->debugStream() << death_list_.size() << " dead units";
     for (auto unit : death_list_)
-      static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
+      _destroy_unit(unit);
+      //static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
 
     // clear combat temps
     death_list_.clear();
@@ -986,6 +1061,27 @@ namespace Net {
     death_list_.clear();
     attackers_.clear();
     blockers_.clear();
+  }
+
+  void instance::_destroy_puppet(int inUID) {
+    puppet_ptr _winner, _loser;
+
+    for (auto puppet : puppets_)
+      if (puppet->getUID() == inUID) {
+        _loser = puppet;
+      } else
+        _winner = puppet;
+
+    assert(_winner && _loser);
+
+    winner_ = _winner;
+    log_->infoStream() << "match is over, winner is " << winner_->getName();
+
+    Event evt(EventUID::MatchFinished);
+    evt.setProperty("W", winner_->getUID());
+    broadcast(evt);
+
+    running_ = false;
   }
 }
 }

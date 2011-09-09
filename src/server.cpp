@@ -168,7 +168,7 @@ namespace Net {
     resolve_paths();
     init_logger();
 
-    std::string _ip("192.168.1.101");
+    std::string _ip("0.0.0.0");
     std::string _port(SERVER_PORT);
 
     std::cout << "-+-+-+-+-+-+ Elementum Server +-+-+-+-+-+-\n";

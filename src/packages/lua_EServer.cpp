@@ -1,6 +1,6 @@
 /*
 ** Lua binding: EServer
-** Generated automatically by tolua++-1.0.92 on Fri Jul 15 15:44:33 2011.
+** Generated automatically by tolua++-1.0.92 on Thu Sep  8 21:44:14 2011.
 */
 
 #ifndef __cplusplus
@@ -196,31 +196,36 @@ static int tolua_EServer_Pixy_Net_instance_destroy_unit00(lua_State* tolua_S)
 }
 #endif //#ifndef TOLUA_DISABLE
 
-/* method: _destroy_unit of class  Pixy::Net::instance */
-#ifndef TOLUA_DISABLE_tolua_EServer_Pixy_Net_instance_destroy_unit01
-static int tolua_EServer_Pixy_Net_instance_destroy_unit01(lua_State* tolua_S)
+/* method: _destroy_puppet of class  Pixy::Net::instance */
+#ifndef TOLUA_DISABLE_tolua_EServer_Pixy_Net_instance_destroy_puppet00
+static int tolua_EServer_Pixy_Net_instance_destroy_puppet00(lua_State* tolua_S)
 {
+#ifndef TOLUA_RELEASE
  tolua_Error tolua_err;
  if (
      !tolua_isusertype(tolua_S,1,"Pixy::Net::instance",0,&tolua_err) ||
-     (tolua_isvaluenil(tolua_S,2,&tolua_err) || !tolua_isusertype(tolua_S,2,"Pixy::Unit",0,&tolua_err)) ||
+     !tolua_isnumber(tolua_S,2,0,&tolua_err) ||
      !tolua_isnoobj(tolua_S,3,&tolua_err)
  )
   goto tolua_lerror;
  else
+#endif
  {
   Pixy::Net::instance* self = (Pixy::Net::instance*)  tolua_tousertype(tolua_S,1,0);
-  Pixy::Unit* tolua_var_3 = ((Pixy::Unit*)  tolua_tousertype(tolua_S,2,0));
+  int inUID = ((int)  tolua_tonumber(tolua_S,2,0));
 #ifndef TOLUA_RELEASE
-  if (!self) tolua_error(tolua_S,"invalid 'self' in function '_destroy_unit'", NULL);
+  if (!self) tolua_error(tolua_S,"invalid 'self' in function '_destroy_puppet'", NULL);
 #endif
   {
-   self->_destroy_unit(*tolua_var_3);
+   self->_destroy_puppet(inUID);
   }
  }
  return 0;
-tolua_lerror:
- return tolua_EServer_Pixy_Net_instance_destroy_unit00(tolua_S);
+#ifndef TOLUA_RELEASE
+ tolua_lerror:
+ tolua_error(tolua_S,"#ferror in function 'destroy_puppet'.",&tolua_err);
+ return 0;
+#endif
 }
 #endif //#ifndef TOLUA_DISABLE
 
@@ -242,7 +247,7 @@ TOLUA_API int tolua_EServer_open (lua_State* tolua_S)
      tolua_function(tolua_S,"send",tolua_EServer_Pixy_Net_instance_send00);
      tolua_function(tolua_S,"create_unit",tolua_EServer_Pixy_Net_instance_create_unit00);
      tolua_function(tolua_S,"destroy_unit",tolua_EServer_Pixy_Net_instance_destroy_unit00);
-     tolua_function(tolua_S,"destroy_unit",tolua_EServer_Pixy_Net_instance_destroy_unit01);
+     tolua_function(tolua_S,"destroy_puppet",tolua_EServer_Pixy_Net_instance_destroy_puppet00);
     tolua_endmodule(tolua_S);
    tolua_endmodule(tolua_S);
   tolua_endmodule(tolua_S);

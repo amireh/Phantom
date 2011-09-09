@@ -9,6 +9,6 @@ class instance {
 
   Pixy::Unit* _create_unit @ create_unit(std::string model, Pixy::Puppet& owner);
   void _destroy_unit @ destroy_unit(int inUID);
-  void _destroy_unit @ destroy_unit(Pixy::Unit&);
+  void _destroy_puppet @ destroy_puppet(int inUID);
 
 }

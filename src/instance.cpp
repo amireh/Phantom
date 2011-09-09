@@ -739,8 +739,24 @@ namespace Net {
 
       assert(lTarget);
       lSpell->setTarget(lTarget);
-    } else
+    } else {
+      // if the spell requires a target, it must be given
+#ifdef PARANOID
+      assert(!lSpell->requiresTarget());
+#else
+      // gracefully reject the event
+      if (lSpell->requiresTarget())
+      {
+        log_->errorStream()
+          << "an invalid spell request#" << lSpell->getUID()
+          << "; target is required but not given";
+        Event e(inEvt);
+        return reject(e);
+      }
+#endif
+      // otherwise, the spell's target is the caster itself
       lSpell->setTarget(lCaster);
+    }
 
 		// dispatch to Lua
 		lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");

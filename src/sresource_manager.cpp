@@ -48,10 +48,11 @@ namespace Net {
       pqxx::result::const_iterator lRecord;
       {
         lDump << "[spells];" << lRecords.size() << "\n";
-        int nrFields = 11;
+        int nrFields = 12;
         std::string lFields[] =
         {"name", "race", "duration", "cost_wp", "cost_hp", "aspect",
-         "is_dispellable", "requires_target", "phase", "cost_channels", "description"};
+         "is_dispellable", "requires_target", "phase", "cost_channels",
+         "requires_enemy_target", "description"};
         for (lRecord = lRecords.begin(); lRecord != lRecords.end(); ++lRecord) {
           lDump << "$";
           for (int i=0; i < nrFields; ++i)

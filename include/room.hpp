@@ -43,13 +43,13 @@ namespace Net {
       max_viewable_contacts = 49
     };
 
-		room(boost::asio::io_service&, std::string uid);
+		room(boost::asio::io_service&, std::string uid, bool is_permanent = false);
     room() = delete;
     room(const room&) = delete;
     room& operator=(const room&) = delete;
 		virtual ~room();
 
-    void enqueue(const Event&, player_cptr);
+    //~ void enqueue(const Event&, player_cptr);
     void enlist(player_cptr);
     void remove(player_cptr);
 
@@ -58,8 +58,37 @@ namespace Net {
     void relay(std::string const& msg, player_cptr sender);
     void tell(std::string const& msg, player_cptr sender, std::string const& recipient);
 
+    /*!
+     * @brief
+     * Permanent rooms don't automatically close when no players are enlisted.
+     */
+    bool is_permanent() const;
+
+    /*!
+     * @brief
+     * Returns true once any player has joined this room.
+     *
+     * Permanent rooms are always open.
+     */
+    bool is_open() const;
+
+    /*!
+     * @brief
+     * Returns true if this room has no enlisted players.
+     *
+     * @note
+     * This is called by lobby::close_room() to verify that no new players
+     * have connected to this room _after_ it flagged itself for closing
+     * and _before_ the lobby actually closes it.
+     */
+    bool is_empty() const;
+
 	protected:
     friend class lobby;
+
+    void do_enlist(player_cptr);
+    void do_remove(player_cptr);
+
 
    /*!
      * @brief
@@ -99,12 +128,14 @@ namespace Net {
 
 	private:
 		log4cpp::Category	*log_;
+    bool is_permanent_;
+    bool is_open_;
 
     void _relay(std::string const& msg, std::string const& sender);
 
 		players_t	players_; //! clients connected to this room
 
-    dispatcher dispatcher_;
+    //~ dispatcher dispatcher_;
     boost::asio::strand strand_;
 
     bool running_;

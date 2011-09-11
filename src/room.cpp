@@ -13,15 +13,18 @@
 namespace Pixy {
 namespace Net {
 
-	room::room(boost::asio::io_service& io_service, std::string uid)
-  : dispatcher_(io_service),
+	room::room(boost::asio::io_service& io_service, std::string uid, bool is_permanent)
+  : //dispatcher_(io_service),
     strand_(io_service),
-    name_(uid)
+    name_(uid),
+    is_permanent_(is_permanent)
   {
 
 		log_ = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "room#" + name_);
 
     running_ = true;
+    is_open_ = false;
+
     bind_handlers();
 
     log_->infoStream() << "now open";
@@ -59,9 +62,11 @@ namespace Net {
 	}
 
 	void room::broadcast(const Event& evt) {
-    for (auto player : players_)
-      if (player && player->is_online())
-        send(player, evt);
+    strand_.post( [&, evt]() -> void {
+      for (auto player : players_)
+        if (player && player->is_online())
+          send(player, evt);
+    });
       //else
       //  remove(player);
 	}
@@ -99,18 +104,23 @@ namespace Net {
     players_.push_back(player);
 	}
 
-  void room::enqueue(const Event& evt, player_cptr sender) {
+  /*void room::enqueue(const Event& evt, player_cptr sender) {
     if (!running_)
       return;
 
     assert(evt.Sender);
     //~ std::cout << "room: got evt from " << evt.Sender->get_username() << "\n";
     dispatcher_.deliver(evt);
+  }*/
+
+  void room::enlist(player_cptr player)
+  {
+    strand_.post( [&, player]() -> void { do_enlist(player); } );
   }
-
-
-  void room::enlist(player_cptr player) {
+  void room::do_enlist(player_cptr player) {
     log_->debugStream() << "a player has joined the channel: " << player->get_puppet()->getName();
+
+    is_open_ = true;
 
     //_relay(player->get_puppet()->getName() + " has joined the channel.", name_);
     Event announcement(EventUID::JoinedRoom, EventFeedback::Ok);
@@ -136,22 +146,34 @@ namespace Net {
     send(player, confirmation);
   }
 
-  void room::remove(player_cptr player) {
+  void room::remove(player_cptr player)
+  {
+    strand_.post( [&, player]() -> void { do_remove(player); } );
+  }
+  void room::do_remove(player_cptr in_player) {
     for (auto player_ : players_)
-      if (player_ == player)
+      if (player_ == in_player)
       {
-        log_->debugStream() << "a player has left channel: " << player->get_puppet()->getName();
+        std::string player_name = player_->get_puppet()->getName();
+
+        log_->debugStream() << "a player has left channel: " << player_name;
 
         //_relay(player->get_puppet()->getName() + " has left the channel.", name_);
         players_.remove(player_);
 
+        // close this room down if there are no players left and it's
+        // not a permanent one
+        if (!is_permanent() && players_.empty())
+          return server::singleton().get_lobby()->close_room(shared_from_this());
+
         Event e(EventUID::LeftRoom, EventFeedback::Ok);
         e.setProperty("R", name_);
-        e.setProperty("S", player->get_puppet()->getName());
+        e.setProperty("S", player_name);
         broadcast(e);
 
         break;
       }
+
   }
 
   void room::relay(std::string const& msg, player_cptr sender)
@@ -190,6 +212,21 @@ namespace Net {
     reply.setProperty("M", msg);
     reply.setProperty("S", sender->get_puppet()->getName());
     player_->send(reply);
+  }
+
+  bool room::is_permanent() const
+  {
+    return is_permanent_;
+  }
+
+  bool room::is_open() const
+  {
+    return is_open_ || is_permanent_;
+  }
+
+  bool room::is_empty() const
+  {
+    return players_.empty();
   }
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *

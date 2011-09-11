@@ -23,9 +23,7 @@ namespace Net {
 
     log_->infoStream() << "lobby is open";
 
-    room_ptr new_room_(new room(strand_.get_io_service(), "General"));
-    rooms_.insert(std::make_pair(new_room_->get_name(), new_room_));
-    new_room_.reset();
+    open_room("General", true);
 	}
 
 	lobby::~lobby() {
@@ -91,6 +89,18 @@ namespace Net {
     }
   }
 
+  room_ptr lobby::open_room(const std::string& name, bool is_permanent)
+  {
+    room_ptr new_room_(new room(strand_.get_io_service(), name, is_permanent));
+    rooms_.insert(std::make_pair(new_room_->get_name(), new_room_));
+    return new_room_;
+  }
+
+  void lobby::close_room(room_ptr in_room)
+  {
+    strand_.post([&, in_room]() -> void { rooms_.erase(in_room->get_name()); });
+  }
+
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Event Handlers
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
@@ -110,8 +120,12 @@ namespace Net {
     rooms_t::iterator room_ = rooms_.find(e.getProperty("R"));
     if (room_ == rooms_.end())
     {
-      Event resp(e);
-      return reject(resp);
+      room_ptr new_room_ = open_room(e.getProperty("R"));
+      new_room_->enlist(e.Sender);
+      new_room_.reset();
+      return;
+      //Event resp(e);
+      //return reject(resp);
     }
 
     room_->second->enlist(e.Sender);

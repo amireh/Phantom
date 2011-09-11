@@ -34,7 +34,6 @@ namespace Net {
    * responsible for joining players into rooms, spawning new rooms, and
    * closing them when they're empty.
 	 */
-	class Server;
 	class lobby : public boost::enable_shared_from_this<lobby> {
 	public:
 		lobby(boost::asio::io_service&);
@@ -53,7 +52,15 @@ namespace Net {
 
     void enqueue(const Event&, player_cptr);
 
+    /*!
+     * @brief
+     * Closes a room. This is called internally in room::remove()
+     */
+    void close_room(room_ptr);
+
 	protected:
+
+    room_ptr open_room(std::string const& name, bool is_permanent=false);
 
     /*!
      * @brief

@@ -51,10 +51,11 @@ namespace Net {
       match_finder_(0),
 
       new_instance_(),
-      nr_instances_(0)
+      nr_instances_(0),
+
+      lobby_()
   {
     time(&uptime);
-
   }
 
   server& server::singleton() {
@@ -86,6 +87,9 @@ namespace Net {
   }
   match_finder& server::get_match_finder() {
     return *match_finder_;
+  }
+  lobby_ptr server::get_lobby() {
+    return lobby_;
   }
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
@@ -209,6 +213,8 @@ namespace Net {
 
     match_finder_ = new match_finder(io_service_);
 
+    lobby_.reset(new lobby(io_service_));
+
     // start our player ping timer
     //refresh_timer();
 
@@ -216,6 +222,7 @@ namespace Net {
     workers.join_all();
 
     // clean up
+    lobby_.reset();
     delete match_finder_;
     delete resmgr_;
     delete dbmgr_;

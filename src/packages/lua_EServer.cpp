@@ -1,6 +1,6 @@
 /*
 ** Lua binding: EServer
-** Generated automatically by tolua++-1.0.92 on Thu Sep  8 21:44:14 2011.
+** Generated automatically by tolua++-1.0.92 on Sat Sep 10 17:24:58 2011.
 */
 
 #ifndef __cplusplus

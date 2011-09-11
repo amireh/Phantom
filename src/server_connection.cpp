@@ -16,6 +16,7 @@ namespace Net {
     dispatcher_.bind(EventUID::Logout, this, &connection::on_logout);
     dispatcher_.bind(EventUID::SyncGameData, this, &connection::on_sync_game_data);
     dispatcher_.bind(EventUID::JoinQueue, this, &connection::on_join_queue);
+    dispatcher_.bind(EventUID::JoinLobby, this, &connection::on_join_lobby);
   }
 
   connection::~connection() {
@@ -41,7 +42,7 @@ namespace Net {
 
     strand_.post( boost::bind(&server::_close, &server::singleton(), shared_from_this()));
 
-    if (player_) {
+    if (is_authentic()) {
       player_->set_online(false);
 
       if (server::singleton().get_match_finder().already_queued(player_))
@@ -50,6 +51,9 @@ namespace Net {
       if (player_->get_instance()) {
         // notify instance that player is going down
         player_->get_instance()->on_dropout(player_);
+      }
+      if (player_->is_in_lobby()) {
+        server::singleton().get_lobby()->on_dropout(player_);
       }
 
       // log out from DB
@@ -63,6 +67,10 @@ namespace Net {
       std::cout << "got an event from " << player_->get_username() << "\n";
       clone.Sender = player_;
       player_->get_instance()->enqueue(clone, player_);
+    } else if (is_authentic() && player_->is_in_lobby()) {
+      Event clone(inbound);
+      clone.Sender = player_;
+      server::singleton().get_lobby()->enqueue(clone, player_);
     }
 
     base_connection::handle_inbound();
@@ -137,7 +145,7 @@ namespace Net {
 
   void connection::on_logout(const Event &evt) {
     std::cout << "client disconnecting\n";
-    stop();
+    strand_.post( [&]() -> void { this->stop(); });
   }
 
   void connection::on_sync_game_data(const Event &evt) {
@@ -183,6 +191,40 @@ namespace Net {
 
   bool connection::is_authentic() const {
     return (player_);
+  }
+
+  void connection::on_join_lobby(const Event& e)
+  {
+    if (!is_authentic())
+    {
+      std::cerr << "ERROR!! unauthorized attempt to join lobby!!\n";
+      return;
+    }
+
+    assert(e.hasProperty("Puppet"));
+
+    std::string puppet_name = e.getProperty("Puppet");
+
+		// load the puppet
+		puppet_ptr puppet( new Puppet());
+    puppet->setName(puppet_name);
+
+    db_manager& dbmgr = server::singleton().get_dbmgr();
+    dbmgr.load_puppet(
+      puppet_name,
+      *puppet,
+      [&](db_result rc) -> void {
+        if (rc > db_result::Ok) {
+          throw BadEvent(std::string("unknown puppet named: ") + player_->get_puppet()->getName());
+        }
+
+        server::singleton().get_lobby()->enlist(player_);
+      }
+    );
+
+		player_->set_puppet(puppet);
+
+
   }
 
 } // namespace Net

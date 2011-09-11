@@ -9,6 +9,8 @@ SET(Project_SRCS
   sresource_manager.cpp
   match_finder.cpp
   instance.cpp
+  lobby.cpp
+  room.cpp
 )
 
 

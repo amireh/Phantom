@@ -50,6 +50,7 @@
 #include "sresource_manager.hpp"
 #include "match_finder.hpp"
 #include "instance.hpp"
+#include "lobby.hpp"
 
 // LOGGER
 #include "log4cpp/Category.hh"
@@ -87,6 +88,7 @@ namespace Net {
     db_manager& get_dbmgr();
     sresource_manager& get_resmgr();
     match_finder& get_match_finder();
+    lobby_ptr get_lobby();
 
     std::string const& get_root_path();
     std::string const& get_bin_path();
@@ -156,6 +158,8 @@ namespace Net {
     instance_ptr new_instance_;
     std::list<instance_ptr> instances_;
     uint64_t nr_instances_;
+
+    lobby_ptr lobby_;
 
     // monitoring stuff
     time_t uptime;

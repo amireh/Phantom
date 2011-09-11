@@ -104,10 +104,9 @@ namespace Net {
     << "starting match between "
     << player1->get_puppet()->getName() << " and " << player2->get_puppet()->getName();
 
-    Event evt(EventUID::MatchFound);
-
-		player1->send(evt);
-		player2->send(evt);
+    //~ Event evt(EventUID::MatchFound);
+		//~ player1->send(evt);
+		//~ player2->send(evt);
 
     std::list<player_cptr> players{player1, player2};
 

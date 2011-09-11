@@ -83,6 +83,8 @@ namespace Net {
      */
     bool is_empty() const;
 
+    player_cptr get_player(std::string const& name) const;
+
 	protected:
     friend class lobby;
 

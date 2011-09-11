@@ -97,10 +97,16 @@ namespace Net {
 
 		bind_handlers();
 
-		// give them the puppets so they can populate them
+		// prepare the puppets stream that will be sent on SyncPuppetData
 		create_puppets();
 
 		log_->infoStream() << "a match is beginning";
+
+    strand_.post([&]() -> void {
+      Event e(EventUID::MatchFound);
+      broadcast(e);
+    });
+
   }
 
 
@@ -252,6 +258,7 @@ namespace Net {
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
 	void instance::bind_handlers() {
+    dispatcher_.bind(EventUID::SyncPuppetData, this, &instance::on_sync_puppet_data);
     dispatcher_.bind(EventUID::Ready, this, &instance::on_player_ready);
     dispatcher_.bind(EventUID::StartTurn, this, &instance::on_start_turn);
     dispatcher_.bind(EventUID::EndTurn, this, &instance::on_end_turn);
@@ -311,6 +318,8 @@ namespace Net {
 		// attach them to this instance
 		((Player*)player.get())->set_instance(shared_from_this());
 
+    ((Player*)player.get())->set_in_lobby(false);
+
 		log_->debugStream()
 		<< "a puppet named "
 		<< player->get_puppet()->getName() << "(" << player->get_puppet()->getUID() << ")"
@@ -325,11 +334,7 @@ namespace Net {
     for (auto puppet : puppets_)
       lPuppets.push_back(puppet.get());
 
-    std::ostringstream stream;
-    server::singleton().get_resmgr().puppets_to_stream(stream, lPuppets);
-    Event evt(EventUID::SyncPuppetData, EventFeedback::Ok, Event::NoFormat);
-    evt.setProperty("Data", stream.str());
-    broadcast(evt);
+    server::singleton().get_resmgr().puppets_to_stream(puppets_stream_, lPuppets);
 	}
 
   void instance::enqueue(const Event& evt, player_cptr sender) {
@@ -519,7 +524,14 @@ namespace Net {
 	 *	Event Handlers
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
+  void instance::on_sync_puppet_data(const Event& e)
+  {
+    Event evt(EventUID::SyncPuppetData, EventFeedback::Ok, Event::NoFormat);
+    evt.setProperty("Data", puppets_stream_.str());
+    send(e.Sender, evt);
+  }
 	void instance::on_player_ready(const Event& inEvt) {
+    log_->debugStream() << "received ready ack from " << inEvt.Sender->get_username();
 
 		// are all players ready?
 		if ((++nr_ready_players_) == players_.size())

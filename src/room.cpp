@@ -229,6 +229,17 @@ namespace Net {
     return players_.empty();
   }
 
+  player_cptr room::get_player(std::string const& name) const
+  {
+    for (auto player : players_)
+      if (player->get_puppet()->getName() == name)
+      {
+        return player;
+      }
+
+    return player_cptr();
+  }
+
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
 	 *	Event Handlers
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */

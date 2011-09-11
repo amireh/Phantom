@@ -158,16 +158,40 @@ namespace Net {
 
   void lobby::on_send_whisper(const Event& e)
   {
-    assert(e.hasProperty("R") && e.hasProperty("T") && e.hasProperty("M"));
-    rooms_t::iterator room_ = rooms_.find(e.getProperty("R"));
+    assert(e.hasProperty("T") && e.hasProperty("M"));
+    //~ rooms_t::iterator room_ = rooms_.find(e.getProperty("R"));
     std::string msg_ = e.getProperty("M");
-    if (room_ == rooms_.end() || msg_.size() > room::max_msg_length)
+    std::string target_ = e.getProperty("T");
+    if (msg_.size() > room::max_msg_length)
     {
       Event resp(e);
       return reject(resp);
     }
 
-    room_->second->tell(msg_, e.Sender, e.getProperty("T"));
+    // find the target
+    player_cptr player;
+    for (auto room_ : rooms_) {
+      player = room_.second->get_player(target_);
+      if (player != NULL)
+      {
+        log_->debugStream()
+          << "delivering whisper from " << e.Sender->get_puppet()->getName()
+          << " to " << player->get_puppet()->getName();
+
+        Event tell(EventUID::IncomingWhisper, EventFeedback::Ok);
+        tell.setProperty("M", msg_);
+        tell.setProperty("S", target_);
+        return player->send(tell);
+      }
+    }
+
+    Event resp(e);
+    resp.setProperty("E", "UnknownTarget");
+    log_->debugStream()
+          << "invalid whisper from " << e.Sender->get_puppet()->getName()
+          << " to " << target_ << ", target not found";
+    return reject(resp);
+    //room_->second->tell(msg_, e.Sender, e.getProperty("T"));
   }
 
 }

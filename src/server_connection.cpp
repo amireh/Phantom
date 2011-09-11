@@ -17,6 +17,7 @@ namespace Net {
     dispatcher_.bind(EventUID::SyncGameData, this, &connection::on_sync_game_data);
     dispatcher_.bind(EventUID::JoinQueue, this, &connection::on_join_queue);
     dispatcher_.bind(EventUID::JoinLobby, this, &connection::on_join_lobby);
+    dispatcher_.bind(EventUID::LeaveQueue, this, &connection::on_leave_queue);
   }
 
   connection::~connection() {
@@ -158,12 +159,14 @@ namespace Net {
   }
 
   void connection::on_join_queue(const Event& evt) {
-    assert(player_);
+    assert(player_ && is_authentic());
 
-    if (!evt.hasProperty("Puppet"))
-      return;
+    //if (!evt.hasProperty("Puppet"))
+    //  return;
 
-    std::string puppet_name = evt.getProperty("Puppet");
+    server::singleton().get_match_finder().join_queue(player_);
+
+   /* std::string puppet_name = evt.getProperty("Puppet");
 
 		// load the puppet
 		puppet_ptr puppet( new Puppet());
@@ -182,7 +185,7 @@ namespace Net {
       }
     );
 
-		player_->set_puppet(puppet);
+		player_->set_puppet(puppet);*/
   }
 
   bool connection::in_instance() const {
@@ -225,6 +228,13 @@ namespace Net {
 		player_->set_puppet(puppet);
 
 
+  }
+
+  void connection::on_leave_queue(const Event& e)
+  {
+    assert(is_authentic());
+
+    server::singleton().get_match_finder().leave_queue(player_);
   }
 
 } // namespace Net

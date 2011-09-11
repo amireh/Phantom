@@ -169,6 +169,8 @@ namespace Net {
 		 */
 		void on_player_ready(const Event& inEvt);
 
+    void on_sync_puppet_data(const Event& inEvt);
+
     /*
      * Once this event is received, it means the puppet received the StartTurn
      * order and has started their local timer. Here we begin the turn timer
@@ -209,6 +211,8 @@ namespace Net {
 		log4cpp::Category	*log_;
 		lua_State			*lua_;
 		log4cpp::Category	*lua_log_;
+
+    std::ostringstream puppets_stream_;
 
 		//int	mId; /*! my unique id in the cluster */
     boost::uuids::uuid uuid_;

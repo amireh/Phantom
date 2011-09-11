@@ -59,6 +59,7 @@ class connection : public base_connection
   void on_logout(const Event& msg);
   void on_sync_game_data(const Event& evt);
   void on_join_queue(const Event& evt);
+  void on_leave_queue(const Event& evt);
   void on_join_lobby(const Event& evt);
   void on_load_puppet(db_result rc);
 

@@ -44,7 +44,11 @@ namespace Net {
       //lDump << "\\elementum\\\n";
 
       // spells
-      pqxx::result lRecords = txn.exec("SELECT * FROM spells");
+      pqxx::result lRecords = txn.exec(
+        "select name, race, duration, cost_wp, cost_hp, aspect, \
+        is_dispellable, requires_target, phase, cost_channels, \
+        requires_enemy_target, description \
+        from spells");
       pqxx::result::const_iterator lRecord;
       {
         lDump << "[spells];" << lRecords.size() << "\n";
@@ -64,17 +68,17 @@ namespace Net {
 
       // minions
       lRecords = txn.exec(
-        "select name,race,faction, ap, hp, upkeep, \
-        is_team_attacker, is_unblockable, is_restless, is_flying, \
+        "select name,race, ap, hp, upkeep, \
+        is_unblockable, is_restless, is_flying, \
         is_trampling, has_first_strike, has_lifetap, description \
         from minions");
       {
         lDump << "[minions];" << lRecords.size() << "\n";
-        int nrFields = 14;
+        int nrFields = 12;
         std::string lFields[] =
-        {"name", "race", "faction", "ap", "hp", "upkeep", "is_team_attacker",
-         "is_unblockable", "is_restless", "is_flying", "is_trampling",
-         "has_first_strike", "has_lifetap", "description"};
+        {"name", "race", "ap", "hp", "upkeep",
+         "is_unblockable", "is_restless", "is_flying",
+         "is_trampling", "has_first_strike", "has_lifetap", "description"};
         for (lRecord = lRecords.begin(); lRecord != lRecords.end(); ++lRecord) {
           lDump << "$";
           for (int i=0; i < nrFields; ++i)
@@ -114,7 +118,7 @@ namespace Net {
         }
       }
 
-      lDump << "/elementum/";
+      lDump << "^";
       lDump.close();
 
     } catch (std::exception& e) {
@@ -285,7 +289,7 @@ namespace Net {
 
     out << "[decks];" << nrDecks << "\n";
     out << lDeckStream.str();
-    out << "/elementum/";
+    out << "^";
   }
 
   void sresource_manager::_assign_talents(Puppet& inPuppet, std::string inTalents) {

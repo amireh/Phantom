@@ -217,11 +217,17 @@ namespace Net {
       puppet_name,
       *puppet,
       [&](db_result rc) -> void {
+        Event e(EventUID::JoinLobby, EventFeedback::Ok);
+
         if (rc > db_result::Ok) {
+          e.Feedback = EventFeedback::Error;
           throw BadEvent(std::string("unknown puppet named: ") + player_->get_puppet()->getName());
         }
 
         server::singleton().get_lobby()->enlist(player_);
+
+        e.setProperty("P", player_->get_puppet()->getName());
+        player_->send(e);
       }
     );
 

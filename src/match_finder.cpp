@@ -108,6 +108,10 @@ namespace Net {
 		//~ player1->send(evt);
 		//~ player2->send(evt);
 
+    // remove them from lobby
+    server::singleton().get_lobby()->on_dropout(player1);
+    server::singleton().get_lobby()->on_dropout(player2);
+
     std::list<player_cptr> players{player1, player2};
 
 		server::singleton()._launch_instance(players);

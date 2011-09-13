@@ -84,9 +84,9 @@ namespace Net {
 
   void lobby::on_dropout(player_cptr player) {
     for (auto room_ : rooms_)
-    {
       room_.second->remove(player);
-    }
+
+    ((Player*)player.get())->set_in_lobby(false);
   }
 
   room_ptr lobby::open_room(const std::string& name, bool is_permanent)
@@ -169,10 +169,10 @@ namespace Net {
     }
 
     // find the target
-    player_cptr player;
+    const Player* player = 0;
     for (auto room_ : rooms_) {
       player = room_.second->get_player(target_);
-      if (player != NULL)
+      if (player)
       {
         log_->debugStream()
           << "delivering whisper from " << e.Sender->get_puppet()->getName()

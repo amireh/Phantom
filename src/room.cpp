@@ -229,15 +229,16 @@ namespace Net {
     return players_.empty();
   }
 
-  player_cptr room::get_player(std::string const& name) const
+  const Player* room::get_player(std::string const& name) const
   {
     for (auto player : players_)
       if (player->get_puppet()->getName() == name)
       {
-        return player;
+        return player.get();
       }
 
-    return player_cptr();
+    //~ return player_cptr();
+    return 0;
   }
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *

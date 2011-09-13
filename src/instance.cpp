@@ -290,8 +290,10 @@ namespace Net {
 		Event evt(EventUID::StartTurn);
 		send(active_player_, evt);
 
-    for (auto puppet : puppets_)
+    for (auto puppet : puppets_) {
+      puppet->live();
       draw_spells(puppet, 4);
+    }
 
 		started_ = true;
 	}
@@ -860,8 +862,13 @@ namespace Net {
 		{
 			log_->errorStream() << "could not find Lua event processor!";
 			lua_pop(lua_,1);
-			return;
+      Event e(inEvt);
+      return reject(e);
 		}
+
+    log_->debugStream() << "\t things are looking good, passing to lua: "
+      << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"
+      << lSpell->getCostChannels();
 
 		tolua_pushusertype(lua_,(void*)lCaster,"Pixy::Entity");
     tolua_pushusertype(lua_,(void*)lTarget,"Pixy::Entity");
@@ -876,6 +883,10 @@ namespace Net {
 		bool result = lua_toboolean(lua_, lua_gettop(lua_));
 
 		lua_remove(lua_, lua_gettop(lua_));
+
+    log_->debugStream() << "\t back from lua: "
+      << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"
+      << lSpell->getCostChannels();
 
     // if the spell cast was successful, we first broadcast the command to
     // the clients, then detach the spell from the caster, and finally
@@ -892,9 +903,6 @@ namespace Net {
         broadcast(evt);
       }
 
-      // don't delete the spell object if it's a buff
-      lCaster->detachSpell(lSpell->getUID(), lSpell->getDuration() == 0);
-
       // update the caster stats and broadcast them
       {
         Event evt(EventUID::Unassigned, EventFeedback::Ok);
@@ -902,17 +910,23 @@ namespace Net {
 
         if (lCaster->getRank() == PUPPET)
         {
-          Puppet* tCaster = (Puppet*)lCaster;
+          Puppet* tCaster = static_cast<Puppet*>(lCaster);
           evt.UID = EventUID::UpdatePuppet;
           // apply WP cost, if any
           if (lSpell->getCostWP() > 0) {
             tCaster->setWP(tCaster->getWP() - lSpell->getCostWP());
             evt.setProperty("WP", tCaster->getWP());
+            log_->debugStream()
+              << tCaster->getName() << " paid " << lSpell->getCostWP() << " wp,"
+              << " and now has " << tCaster->getWP() << " wp.";
           }
           // apply the Channels cost, if any
           if (lSpell->getCostChannels() > 0) {
             tCaster->setChannels(tCaster->getChannels() - lSpell->getCostChannels());
             evt.setProperty("Channels", tCaster->getChannels());
+            log_->debugStream()
+              << tCaster->getName() << " paid " << lSpell->getCostChannels() << " channels,"
+              << " and now has " << tCaster->getChannels() << " channels.";
           }
         } else
           evt.UID = EventUID::UpdateUnit;
@@ -921,17 +935,21 @@ namespace Net {
         if (lSpell->getCostHP() > 0) {
           lCaster->setHP(lCaster->getHP() - lSpell->getCostHP());
           evt.setProperty("HP", lCaster->getHP());
+          log_->debugStream()
+              << lCaster->getName() << " paid " << lSpell->getCostHP() << " hp,"
+              << " and now has " << lCaster->getHP() << " hp.";
         }
 
         broadcast(evt);
       }
 
+      // don't delete the spell object if it's a buff
+      lCaster->detachSpell(lSpell->getUID(), lSpell->getDuration() == 0);
 
     } else {
       // we reject the request
-      Event evt(EventUID::CastSpell, EventFeedback::InvalidRequest);
-      evt.setProperty("Spell", lSpell->getUID());
-      broadcast(evt);
+      Event e(inEvt);
+      return reject(e);
     }
 
     lSpell = 0;

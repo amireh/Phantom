@@ -897,6 +897,7 @@ namespace Net {
       {
         Event evt(EventUID::CastSpell, EventFeedback::Ok);
         evt.setProperty("Spell", lSpell->getUID());
+        evt.setProperty("C", lSpell->getCaster()->getUID());
         if (lSpell->requiresTarget())
           evt.setProperty("T", lTarget->getUID());
 

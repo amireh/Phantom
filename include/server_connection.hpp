@@ -53,11 +53,18 @@ class connection : public base_connection
 
   virtual void handle_inbound();
 
+  void reject(Event&);
+
   void on_pong(const Event& evt);
   void on_login(const Event& evt);
   void on_login_feedback(db_result rc, std::string username);
   void on_logout(const Event& msg);
   void on_sync_game_data(const Event& evt);
+  void on_sync_puppets(const Event& evt);
+  void on_create_puppet(const Event& evt);
+  void on_remove_puppet(const Event& evt);
+  void on_update_deck(const Event& evt);
+  void on_remove_deck(const Event& evt);
   void on_join_queue(const Event& evt);
   void on_leave_queue(const Event& evt);
   void on_join_lobby(const Event& evt);

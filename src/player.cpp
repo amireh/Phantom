@@ -27,6 +27,9 @@ namespace Net {
 	Player::~Player() {
     puppet_.reset();
     instance_.reset();
+    for (auto puppet : puppets_)
+      delete puppet;
+    puppets_.clear();
     conn_ = 0;
     online_ = false;
     in_lobby_ = false;
@@ -81,6 +84,11 @@ namespace Net {
   bool Player::operator==(const Player& rhs) const
   {
     return this->username_ == rhs.username_;
+  }
+
+  Player::puppets_t const& Player::get_puppets() const
+  {
+    return puppets_;
   }
 }
 }

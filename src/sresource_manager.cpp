@@ -236,13 +236,30 @@ namespace Net {
     return raw_game_data_size_;
   }
 
-  void sresource_manager::puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets) {
+  void
+  sresource_manager::puppets_to_stream(
+    std::ostringstream& out,
+    Puppet const* inPuppet,
+    bool full)
+  {
+    std::list<const Puppet*> puppets;
+    puppets.push_back(inPuppet);
+    puppets_to_stream(out, puppets, full);
+  }
+
+  void
+  sresource_manager::puppets_to_stream(
+    std::ostringstream& out,
+    const list<Puppet const*>& inPuppets,
+    bool full)
+  {
     std::ostringstream lDeckStream;
     int nrDecks = 0;
 
     list<Puppet const*>::const_iterator lPuppet;
     out << "[puppets];" << inPuppets.size() << "\n";
-    for (lPuppet = inPuppets.begin(); lPuppet != inPuppets.end(); ++lPuppet) {
+    for (lPuppet = inPuppets.begin(); lPuppet != inPuppets.end(); ++lPuppet)
+    {
       // dump puppet to stream
       Puppet const& inPuppet = *(*lPuppet);
       out
@@ -253,42 +270,53 @@ namespace Net {
         << inPuppet.getIntelligence() << ";"
         << inPuppet.getVitality() << ";";
 
-      // fetch puppet talents, dump them to stream
-      const std::list<Talent const*> lTalents = inPuppet.getTalents();
-      std::list<Talent const*>::const_iterator lTalent;
-      std::string talent_names = "";
-      for (lTalent = lTalents.begin(); lTalent != lTalents.end(); ++lTalent)
-        talent_names += (*lTalent)->getName() + ",";
-      if (lTalents.size() > 0)
-        talent_names = talent_names.erase(talent_names.size()-1,1);
-      out << talent_names << ";\n";
+      // providing a full dump? (talents + decks)
+      if (full)
+      {
+        // fetch puppet talents, dump them to stream
+        {
+          const std::list<Talent const*> lTalents = inPuppet.getTalents();
+          std::list<Talent const*>::const_iterator lTalent;
+          std::string talent_names = "";
+          for (lTalent = lTalents.begin(); lTalent != lTalents.end(); ++lTalent)
+            talent_names += (*lTalent)->getName() + ",";
+          if (lTalents.size() > 0)
+            talent_names = talent_names.erase(talent_names.size()-1,1);
+          out << talent_names << ";";
+        } // talents
 
-      // dump puppet decks
-      const std::list<Deck const*> lDecks = inPuppet.getDecks();
+        {
+          // dump puppet decks
+          const std::list<Deck const*> lDecks = inPuppet.getDecks();
 
-      std::list<Deck const*>::const_iterator lDeck;
-      for (lDeck = lDecks.begin(); lDeck != lDecks.end(); ++lDeck) {
-        lDeckStream
-          << "$"
-          << inPuppet.getName() << ";"
-          << (*lDeck)->getName() << ";"
-          << (*lDeck)->getUseCount() << ";";
+          std::list<Deck const*>::const_iterator lDeck;
+          for (lDeck = lDecks.begin(); lDeck != lDecks.end(); ++lDeck) {
+            lDeckStream
+              << "$"
+              << inPuppet.getName() << ";"
+              << (*lDeck)->getName() << ";"
+              << (*lDeck)->getUseCount() << ";";
 
-        Deck::spells_t lSpells = (*lDeck)->_getSpells();
-        Deck::spells_t::const_iterator lSpell;
-        std::string spell_names = "";
-        for (lSpell = lSpells.begin(); lSpell != lSpells.end(); ++lSpell)
-          spell_names += (*lSpell)->getName() + ",";
+            Deck::spells_t lSpells = (*lDeck)->_getSpells();
+            Deck::spells_t::const_iterator lSpell;
+            std::string spell_names = "";
+            for (lSpell = lSpells.begin(); lSpell != lSpells.end(); ++lSpell)
+              spell_names += (*lSpell)->getName() + ",";
 
-        spell_names = spell_names.erase(spell_names.size()-1,1);
-        lDeckStream << spell_names << ";\n";
+            spell_names = spell_names.erase(spell_names.size()-1,1);
+            lDeckStream << spell_names << ";\n";
 
-        ++nrDecks;
-      }
+            ++nrDecks;
+          } // decks loop
+        } // decks
+      } // if full()
+      out << "\n";
+    } // puppet
+
+    if (full) {
+      out << "[decks];" << nrDecks << "\n";
+      out << lDeckStream.str();
     }
-
-    out << "[decks];" << nrDecks << "\n";
-    out << lDeckStream.str();
     out << "^";
   }
 
@@ -298,6 +326,10 @@ namespace Net {
     inTalents = inTalents.erase(0,1).erase(inTalents.size()-2,1); // remove { }
     vector<string> names = Utility::split(inTalents,',');
     vector<string>::iterator name;
+
+    mLog->debugStream() << "\tfound " << names.size() << " talents";
+    if (names.empty() || (names.size() == 1 && names.front() == "\"\""))
+      return;
     for (name = names.begin(); name != names.end(); ++name) {
       inPuppet.addTalent(getTalent((*name).erase(0,1).erase((*name).size()-2,1), inPuppet.getRace()));
     }
@@ -309,7 +341,11 @@ namespace Net {
   }
 
   void sresource_manager::_assign_deck(Puppet& inPuppet, string inName, string inSpells, int inUseCount) {
-    Deck* lDeck = new Deck(&inPuppet);
+    Deck* lDeck = 0;
+    // does the puppet already have this deck? are we updating?
+    inPuppet.removeDeck(inName);
+
+    lDeck = new Deck(&inPuppet);
     lDeck->setName(inName);
     lDeck->setUseCount(inUseCount);
 
@@ -320,7 +356,7 @@ namespace Net {
     assert(elements.size() == 16);
     vector<string>::iterator itr;
     for (itr = elements.begin(); itr != elements.end(); ++itr) {
-      //std::cout << "assigning spell to deck " << (*itr) << "\n";
+      std::cout << "assigning spell to deck " << (*itr) << "\n";
       // strip out the quotes
       std::string spellname = (*itr).erase(0,1).erase((*itr).size()-2,1);
       //(*itr).pop_front();

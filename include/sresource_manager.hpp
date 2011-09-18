@@ -53,9 +53,8 @@ namespace Net {
 
       //std::vector<Puppet*> get_puppets(Player* inPlayer);
 
-      //~ void puppetToStream(BitStream& out, const Puppet& inPuppet);
-      //~ void puppetsToStream(BitStream& out, const list<Puppet const*>& inPuppets);
-      void puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets);
+      void puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets, bool full=true);
+      void puppets_to_stream(std::ostringstream& out, Puppet const* inPuppet, bool full=true);
 
     protected:
       friend class db_manager;

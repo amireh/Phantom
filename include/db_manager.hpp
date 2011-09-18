@@ -43,7 +43,9 @@ namespace Net {
     InvalidName,
     InvalidOwner,
     PuppetTaken,
-    PuppetNotFound
+    PuppetNotFound,
+
+    Error
   };
 
   /*!
@@ -98,10 +100,64 @@ namespace Net {
 		 */
     template <typename Callback>
 		bool load_puppet(std::string inName, Puppet& inPuppet, Callback callback) {
-      void (db_manager::*f)(std::string, Puppet&, boost::tuple<Callback>)
+      void (db_manager::*f)(std::string, Puppet&, boost::tuple<Callback>, bool)
         = &db_manager::do_load_puppet<Callback>;
 
-      strand_.post( boost::bind(f, this, inName, boost::ref(inPuppet), boost::make_tuple(callback)) );
+      strand_.post( boost::bind(f, this, inName, boost::ref(inPuppet), boost::make_tuple(callback), true) );
+    }
+
+    template <typename Callback>
+    void sync_puppets(std::string inUsername, std::list<Puppet*>* inPuppets, Callback callback)
+    {
+      void (db_manager::*f)(std::string,std::list<Puppet*>*, boost::tuple<Callback>)
+        = &db_manager::do_sync_puppets<Callback>;
+
+      strand_.post( boost::bind(f, this, inUsername, inPuppets, boost::make_tuple(callback)) );
+    }
+
+    template <typename Callback>
+    void create_puppet(std::string inUsername, const Puppet* inPuppet, Callback callback)
+    {
+      void (db_manager::*f)(std::string, const Puppet*, boost::tuple<Callback>)
+        = &db_manager::do_create_puppet<Callback>;
+
+      strand_.post( boost::bind(f, this, inUsername, inPuppet, boost::make_tuple(callback)) );
+    }
+
+    template <typename Callback>
+    void remove_puppet(std::string const& inUsername, const Puppet* inPuppet, Callback callback)
+    {
+      void (db_manager::*f)(std::string const&, const Puppet*, boost::tuple<Callback>)
+        = &db_manager::do_remove_puppet<Callback>;
+
+      strand_.post( boost::bind(f, this, inUsername, inPuppet, boost::make_tuple(callback)) );
+    }
+
+    template <typename Callback>
+    void create_template_deck(Puppet* inPuppet, std::string inOriginalDeck, Callback callback)
+    {
+      void (db_manager::*f)(Puppet*, std::string, boost::tuple<Callback>)
+        = &db_manager::do_create_template_deck<Callback>;
+
+      strand_.post( boost::bind(f, this, inPuppet, inOriginalDeck, boost::make_tuple(callback)) );
+    }
+
+    template <typename Callback>
+    void create_or_update_deck(Puppet* inPuppet, std::string const& inDeckName, std::string inSpells, Callback callback)
+    {
+      void (db_manager::*f)(Puppet*, std::string const&, std::string, boost::tuple<Callback>)
+        = &db_manager::do_create_or_update_deck<Callback>;
+
+      strand_.post( boost::bind(f, this, inPuppet, inDeckName, inSpells, boost::make_tuple(callback)) );
+    }
+
+    template <typename Callback>
+    void remove_deck(std::string const& inPuppet, std::string const& inDeck, Callback callback)
+    {
+      void (db_manager::*f)(std::string const&,std::string const&, boost::tuple<Callback>)
+        = &db_manager::do_remove_deck<Callback>;
+
+      strand_.post( boost::bind(f, this, inPuppet, inDeck, boost::make_tuple(callback)) );
     }
 
 #if 0 // __DISABLED__
@@ -130,7 +186,7 @@ namespace Net {
 		 *		true if the profile was properly saved or updated
 		 *
 		 */
-		bool createPuppet(Player const* inPlayer, Puppet const& inProfile);
+		bool create_puppet(Player const* inPlayer, Puppet const& inProfile);
 
     bool updatePuppet(Player const* inPlayer, Puppet const& inPuppet);
 
@@ -192,13 +248,16 @@ namespace Net {
     }
 
     template <typename Callback>
-    void do_load_puppet(std::string inProfileName, Puppet& inPuppet, boost::tuple<Callback> callback)
+    void do_load_puppet(std::string inProfileName, Puppet& inPuppet, boost::tuple<Callback> callback, bool full=true)
     {
-//#if 0 // __DISABLED__ waiting until server & res mgr are migrated to new API
       //pqxx::result result_;
-      std::ostringstream _condition;
+      std::ostringstream _condition, _fields;
       _condition << "puppets.name=" << escape(inProfileName);
-      get_records(result_, "puppets", "*", _condition.str().c_str());
+      _fields << "name, race, level, intelligence, vitality";
+      if (full)
+        _fields << ", talents";
+
+      get_records(result_, "puppets", _fields.str().c_str(), _condition.str().c_str());
 
       if (result_.empty())
         throw std::runtime_error("ERROR! Profile does not exist in database for loading!");
@@ -208,26 +267,190 @@ namespace Net {
       inPuppet.setLevel(convertTo<int>(result_[0]["level"].c_str()));
       inPuppet.setIntelligence(convertTo<int>(result_[0]["intelligence"].c_str()));
       inPuppet.setVitality(convertTo<int>(result_[0]["vitality"].c_str()));
-      server::singleton().get_resmgr()._assign_talents(inPuppet, result_[0]["talents"].c_str());
 
-      // get the decks
-      result_.clear();
-      _condition.str("");
-      _condition << "decks.puppet=" << escape(inPuppet.getName());
-      get_records(result_, "decks", "name,spells,use_count", _condition.str().c_str());
-      pqxx::result::const_iterator lDeck;
-      for (lDeck = result_.begin(); lDeck != result_.end(); ++lDeck) {
-        server::singleton().get_resmgr()._assign_deck(
-          inPuppet,
-          (*lDeck)["name"].c_str(),
-          (*lDeck)["spells"].c_str(),
-          convertTo<int>((*lDeck)["use_count"].c_str()));
+      if (full)
+      {
+        server::singleton().get_resmgr()._assign_talents(inPuppet, result_[0]["talents"].c_str());
+
+        // get the decks
+        result_.clear();
+        _condition.str("");
+        _condition << "decks.puppet=" << escape(inPuppet.getName());
+        get_records(result_, "decks", "name,spells,use_count", _condition.str().c_str());
+        pqxx::result::const_iterator lDeck;
+        for (lDeck = result_.begin(); lDeck != result_.end(); ++lDeck) {
+          server::singleton().get_resmgr()._assign_deck(
+            inPuppet,
+            (*lDeck)["name"].c_str(),
+            (*lDeck)["spells"].c_str(),
+            convertTo<int>((*lDeck)["use_count"].c_str()));
+        }
       }
-//#endif
 
       boost::get<0>(callback)(db_result::Ok);
     }
 
+    template <typename Callback>
+    void do_sync_puppets(std::string inUsername, std::list<Puppet*>* inPuppets, boost::tuple<Callback> callback)
+    {
+      std::ostringstream _condition;
+      _condition << "puppets.account=" << escape(inUsername);
+
+      pqxx::result my_result;
+      get_records(my_result, "puppets", "name", _condition.str().c_str());
+
+      if (my_result.size() == 0)
+      {
+        return boost::get<0>(callback)(db_result::Error);
+      }
+
+      std::cout<<"\tfound " << my_result.size() << " puppets\n";
+      pqxx::result::const_iterator record;
+      for (record = my_result.begin(); record != my_result.end(); ++record)
+      {
+        Puppet* _tmp = new Puppet();
+
+        do_load_puppet(
+          (*record)["name"].c_str(),
+          *_tmp,
+          boost::make_tuple([&, _tmp](db_result ec) -> void {
+            std::cout << "\tdone loading puppet " << _tmp->getName() << "\n";
+          }),
+          false /* don't do a full load */);
+
+        inPuppets->push_back(_tmp);
+        _tmp = 0;
+      }
+
+      std::cout << "\t done loading puppets for player " << inUsername << "\n";
+      boost::get<0>(callback)(db_result::Ok);
+    }
+
+    template <typename Callback>
+    void do_create_puppet(std::string inUsername, const Puppet* inPuppet, boost::tuple<Callback> callback)
+    {
+      std::ostringstream _fields, _values;
+      _fields << "account, name, race, intelligence, vitality, talents";
+      _values
+        << escape(inUsername) << ", "
+        << escape(inPuppet->getName()) << ", "
+        << inPuppet->getRace() << ", "
+        << inPuppet->getIntelligence()	<< ", "
+        << inPuppet->getVitality() << ", "
+        << escape("{\"\"}");
+
+      // create profile
+      bool result = create_record("puppets", _fields.str().c_str(), _values.str().c_str());
+      boost::get<0>(callback)(result ? db_result::Ok : db_result::Error);
+    }
+
+    template <typename Callback>
+    void do_remove_puppet(std::string const& inUsername, const Puppet* inPuppet, boost::tuple<Callback> callback)
+    {
+      std::ostringstream _condition;
+      _condition << "name=" << escape(inPuppet->getName()) << " AND account=" << escape(inUsername);
+      bool result = delete_records("puppets", _condition.str().c_str());
+
+      if (!result)
+      {
+        return boost::get<0>(callback)(db_result::Error);
+      }
+
+      _condition.str("");
+      _condition << "puppet=" << escape(inPuppet->getName());
+      result = delete_records("decks", _condition.str().c_str());
+
+      boost::get<0>(callback)(result ? db_result::Ok : db_result::Error);
+    }
+
+    template <typename Callback>
+    void do_create_template_deck(Puppet* inPuppet, std::string inOriginalDeck, boost::tuple<Callback> callback)
+    {
+      std::ostringstream _condition;
+      _condition << "decks.name=" << escape(inOriginalDeck);
+      bool success = get_records(result_, "decks", "spells", _condition.str().c_str());
+
+      assert(success && !result_.empty());
+
+      server::singleton().get_resmgr()._assign_deck(
+        *inPuppet,
+        inOriginalDeck,
+        result_[0]["spells"].c_str(),
+        0);
+
+      // create the new deck entry
+      {
+        std::ostringstream _fields, _values;
+        _fields << "puppet, name, use_count, spells";
+        _values
+          << escape(inPuppet->getName()) << ", "
+          << escape(inOriginalDeck) << ", "
+          << 0 << ", "
+          << escape(result_[0]["spells"].c_str());
+
+        success = create_record("decks", _fields.str().c_str(), _values.str().c_str());
+      }
+
+      boost::get<0>(callback)(success ? db_result::Ok : db_result::Error);
+    }
+
+    template <typename Callback>
+    void do_create_or_update_deck(
+      Puppet* inPuppet,
+      std::string const& inDeck,
+      std::string inSpells,
+      boost::tuple<Callback> callback)
+    {
+      pqxx::result result;
+
+      std::ostringstream _condition;
+      _condition << "decks.name=" << escape(inDeck) << " AND decks.puppet=" << escape(inPuppet->getName());
+      bool success = get_records(result, "decks", "name, use_count", _condition.str().c_str());
+      bool updating = !result.empty();
+
+      if (success && !updating)
+      {
+        // create the deck
+        std::ostringstream _fields, _values;
+        _fields << "puppet, name, use_count, spells";
+        _values
+          << escape(inPuppet->getName()) << ", "
+          << escape(inDeck) << ", "
+          << 0 << ", "
+          << escape(inSpells);
+
+        bool success_ = create_record("decks", _fields.str().c_str(), _values.str().c_str());
+        if (success_)
+          // update the puppet object's deck
+          server::singleton().get_resmgr().
+            _assign_deck( *inPuppet, inDeck, inSpells, 0);
+
+        return boost::get<0>(callback)(success_ ? db_result::Ok : db_result::Error);
+      } else if (success && updating) {
+        // update the deck
+        bool success_ = update_record("decks", "spells", _condition.str().c_str(), escape(inSpells).c_str());
+
+        if (success_)
+          // update the puppet object's deck
+          server::singleton().get_resmgr().
+            _assign_deck( *inPuppet,  inDeck,  inSpells, convertTo<int>(result[0]["use_count"].c_str()) );
+
+        return boost::get<0>(callback)(success ? db_result::Ok : db_result::Error);
+      }
+
+      // something went wrong
+      return boost::get<0>(callback)(db_result::Error);
+    }
+
+    template <typename Callback>
+    void do_remove_deck(std::string const& inPuppet, std::string const& inDeck, boost::tuple<Callback> callback)
+    {
+      std::ostringstream _condition;
+      _condition << "name=" << escape(inDeck) << " AND puppet=" << escape(inPuppet);
+      bool result = delete_records("decks", _condition.str().c_str());
+
+      boost::get<0>(callback)(result ? db_result::Ok : db_result::Error);
+    }
 		/*! Retrieves a set of record(s) according to the input
 		 *
 		 *	@param

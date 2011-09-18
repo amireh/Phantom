@@ -27,6 +27,8 @@ namespace Net {
 
 	class Player {
 	public:
+    typedef std::list<Puppet*> puppets_t;
+
 		Player(connection*, std::string username);
 		virtual ~Player();
     Player(const Player&) = delete;
@@ -41,6 +43,7 @@ namespace Net {
     bool is_in_lobby() const;
 
     void send(const Event& evt) const;
+    puppets_t const& get_puppets() const;
 
 	protected:
     friend class connection;
@@ -55,6 +58,8 @@ namespace Net {
     void set_in_lobby(bool);
 
     void leave_instance();
+
+    puppets_t puppets_;
 
   private:
     connection* conn_;

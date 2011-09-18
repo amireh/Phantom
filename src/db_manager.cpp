@@ -154,7 +154,7 @@ namespace Net {
 
 		exec_query(_sql.str().c_str(), &result_);
 
-		return (result_.affected_rows() > 1);
+		return (result_.affected_rows() >= 1);
 	}
 
 	bool db_manager::update_record(const char* inTable,
@@ -168,8 +168,8 @@ namespace Net {
 		_sql << "UPDATE "
 		<< inTable
 		<< " SET " << inField
-		<< "='" << inNewValue
-		<< "' WHERE " << inCondition;
+		<< "=" << inNewValue
+		<< " WHERE " << inCondition;
 
 		exec_query(_sql.str().c_str(), &result_);
 

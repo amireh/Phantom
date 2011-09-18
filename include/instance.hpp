@@ -169,7 +169,7 @@ namespace Net {
 		 */
 		void on_player_ready(const Event& inEvt);
 
-    void on_sync_puppet_data(const Event& inEvt);
+    void on_sync_match_puppets(const Event& inEvt);
 
     /*
      * Once this event is received, it means the puppet received the StartTurn

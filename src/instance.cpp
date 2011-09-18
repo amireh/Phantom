@@ -258,7 +258,7 @@ namespace Net {
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
 	void instance::bind_handlers() {
-    dispatcher_.bind(EventUID::SyncPuppetData, this, &instance::on_sync_puppet_data);
+    dispatcher_.bind(EventUID::SyncMatchPuppets, this, &instance::on_sync_match_puppets);
     dispatcher_.bind(EventUID::Ready, this, &instance::on_player_ready);
     dispatcher_.bind(EventUID::StartTurn, this, &instance::on_start_turn);
     dispatcher_.bind(EventUID::EndTurn, this, &instance::on_end_turn);
@@ -526,9 +526,9 @@ namespace Net {
 	 *	Event Handlers
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
-  void instance::on_sync_puppet_data(const Event& e)
+  void instance::on_sync_match_puppets(const Event& e)
   {
-    Event evt(EventUID::SyncPuppetData, EventFeedback::Ok, Event::NoFormat);
+    Event evt(EventUID::SyncMatchPuppets, EventFeedback::Ok, Event::NoFormat);
     evt.setProperty("Data", puppets_stream_.str());
     send(e.Sender, evt);
   }

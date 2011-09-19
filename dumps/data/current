@@ -1,0 +1,35 @@
+[spells];15
+$Chains of Command;0;0;16;0;1;t;t;0;0;f;Break the target enemy minion's will, binding it to your will. Lasts until dispelled.;
+$Nourish;0;3;12;0;1;t;f;0;0;f;Regenerates your puppet's HP by 3 per turn for three turns.;
+$Fartigue;0;2;12;0;1;t;t;0;0;f;Plague the target with odor unheavenly, bursting them for 2 damage points and 1 each turn for two consecutive turns.;
+$Hysteria;3;1;0;0;1;f;t;2;0;f;Uncover the Herdkeeper's true face, effectively rendering the target enemy puppet or minion vulnerable for the whole turn, taking twice the damage dealt against them.;
+$Comet;3;0;8;0;1;f;t;0;0;f;Call down a boulder of molten fury upon the selected target.;
+$Hurl Zij;3;0;0;0;1;f;t;2;0;f;Launch a Fetish Zij under your control against a target enemy puppet or minion, dealing twice the damage of the Fetish Zij while killing it in the process.;
+$Reanimate;3;0;12;0;1;f;t;0;0;f;Raise a dead Fetish Zij in your graveyard back into play.;
+$Summon: Skeleton Footsoldier;0;0;1;0;0;f;f;0;0;f;Placeholder;
+$Summon: Skeleton Mage;0;0;2;0;0;f;f;0;0;f;Placeholder;
+$Summon: Skeleton Warrior;0;0;2;0;0;f;f;0;2;f;Placeholder;
+$Summon: Skeleton Acolyte;0;0;3;0;0;f;f;0;1;f;Placeholder;
+$Summon: Mechanical Gremlin;3;0;1;0;0;f;f;0;0;f;Calls upon the spirit of the ferocious Fetish Zij, binding it to the caster's will.;
+$Summon: Gremlin Brawler;3;0;2;0;0;f;f;0;0;f;Summon this ancient being to launch your Fetish Zij into weapons of utter mayhem!;
+$Summon: Gremlin Engineer;3;0;3;0;0;f;f;0;2;f;The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living;
+$Summon: Master Gremlin;3;0;4;0;0;f;f;0;1;f;Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.;
+[minions];8
+$Mechanical Gremlin;3;1;6;8;t;t;f;f;f;f;Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.;
+$Gremlin Brawler;3;0;2;4;f;f;f;f;f;f;Fear and sheer strength is what controls the Hurlers, they would rather sacrifice any comrade than facing a possibility of death, or... worse.;
+$Gremlin Engineer;3;0;4;6;f;f;f;f;f;f;The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living.;
+$Master Gremlin;3;4;1;2;f;f;f;t;f;f;The Zij are the most fragile of the Fetish, their power lies in their naive negligence of their value: they like to implode;
+$Skeleton Footsoldier;0;1;6;0;f;f;f;f;f;f;Placeholder;
+$Skeleton Mage;0;1;1;4;f;f;f;f;f;f;Placeholder;
+$Skeleton Acolyte;0;5;1;0;f;f;f;f;f;t;Placeholder;
+$Skeleton Warrior;0;2;2;0;f;t;f;f;t;f;Placeholder;
+[minion spells];3
+$Mechanical Gremlin;Hysteria;
+$Gremlin Brawler;Hurl Zij;
+$Gremlin Engineer;Reanimate;
+[talents]; 4
+$Improved Earthling;0;0;;Improve your something to genuinely impress the ladies.;
+$Bad Mojo;3;2;{"Improved Mojo"};Badass stuff.;
+$Improved Mojo;3;1;;Improve your mojo.;
+$Very Bad Mojo;3;2;{"Improved Mojo","Bad Mojo"};The baddest stuff.;
+^

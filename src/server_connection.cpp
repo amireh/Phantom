@@ -323,11 +323,29 @@ namespace Net {
   }
 
   void connection::on_join_queue(const Event& evt) {
-    assert(player_ && is_authentic());
+    assert(player_ && is_authentic() && evt.hasProperty("D"));
 
     //if (!evt.hasProperty("Puppet"))
     //  return;
 
+    // make sure the puppet has that deck
+    std::string deck_name = evt.getProperty("D");
+    assert(player_->get_puppet()->hasDeck(deck_name));
+
+    Deck *deck = 0;
+    Puppet::decks_t const& decks = player_->get_puppet()->getDecks();
+    for (Puppet::decks_t::const_iterator itr = decks.begin();
+      itr != decks.end();
+      ++itr)
+    {
+      if ((*itr)->getName() == deck_name)
+      {
+        deck = (Deck*)*itr;
+        break;
+      }
+    }
+
+    player_->get_puppet()->setDeck(deck);
     server::singleton().get_match_finder().join_queue(player_);
 
    /* std::string puppet_name = evt.getProperty("Puppet");

@@ -1,32 +1,42 @@
-[spells];15
-$Chains of Command;0;0;16;0;1;t;t;0;0;f;Break the target enemy minion's will, binding it to your will. Lasts until dispelled.;
-$Nourish;0;3;12;0;1;t;f;0;0;f;Regenerates your puppet's HP by 3 per turn for three turns.;
-$Fartigue;0;2;12;0;1;t;t;0;0;f;Plague the target with odor unheavenly, bursting them for 2 damage points and 1 each turn for two consecutive turns.;
-$Hysteria;3;1;0;0;1;f;t;2;0;f;Uncover the Herdkeeper's true face, effectively rendering the target enemy puppet or minion vulnerable for the whole turn, taking twice the damage dealt against them.;
-$Comet;3;0;8;0;1;f;t;0;0;f;Call down a boulder of molten fury upon the selected target.;
-$Hurl Zij;3;0;0;0;1;f;t;2;0;f;Launch a Fetish Zij under your control against a target enemy puppet or minion, dealing twice the damage of the Fetish Zij while killing it in the process.;
-$Reanimate;3;0;12;0;1;f;t;0;0;f;Raise a dead Fetish Zij in your graveyard back into play.;
+[spells];20
+$Nourish;0;3;3;0;1;t;f;0;0;f;Regenerates your puppet's HP by 3 per turn for three turns.;
+$Chains of Command;0;0;1;3;1;t;t;0;0;t;Break the target enemy minion's will, binding it to your will. Lasts until dispelled.;
+$Fartigue;0;2;2;0;1;t;t;0;0;t;Plague the target with odor unheavenly, bursting them for 2 damage points and 1 each turn for two consecutive turns.;
 $Summon: Skeleton Footsoldier;0;0;1;0;0;f;f;0;0;f;Placeholder;
-$Summon: Skeleton Mage;0;0;2;0;0;f;f;0;0;f;Placeholder;
-$Summon: Skeleton Warrior;0;0;2;0;0;f;f;0;2;f;Placeholder;
-$Summon: Skeleton Acolyte;0;0;3;0;0;f;f;0;1;f;Placeholder;
-$Summon: Mechanical Gremlin;3;0;1;0;0;f;f;0;0;f;Calls upon the spirit of the ferocious Fetish Zij, binding it to the caster's will.;
-$Summon: Gremlin Brawler;3;0;2;0;0;f;f;0;0;f;Summon this ancient being to launch your Fetish Zij into weapons of utter mayhem!;
-$Summon: Gremlin Engineer;3;0;3;0;0;f;f;0;2;f;The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living;
-$Summon: Master Gremlin;3;0;4;0;0;f;f;0;1;f;Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.;
-[minions];8
-$Mechanical Gremlin;3;1;6;8;t;t;f;f;f;f;Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.;
-$Gremlin Brawler;3;0;2;4;f;f;f;f;f;f;Fear and sheer strength is what controls the Hurlers, they would rather sacrifice any comrade than facing a possibility of death, or... worse.;
-$Gremlin Engineer;3;0;4;6;f;f;f;f;f;f;The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living.;
-$Master Gremlin;3;4;1;2;f;f;f;t;f;f;The Zij are the most fragile of the Fetish, their power lies in their naive negligence of their value: they like to implode;
-$Skeleton Footsoldier;0;1;6;0;f;f;f;f;f;f;Placeholder;
-$Skeleton Mage;0;1;1;4;f;f;f;f;f;f;Placeholder;
-$Skeleton Acolyte;0;5;1;0;f;f;f;f;f;t;Placeholder;
-$Skeleton Warrior;0;2;2;0;f;t;f;f;t;f;Placeholder;
-[minion spells];3
-$Mechanical Gremlin;Hysteria;
-$Gremlin Brawler;Hurl Zij;
-$Gremlin Engineer;Reanimate;
+$Summon: Skeleton Mage;0;0;1;0;0;f;f;0;0;f;Placeholder;
+$Summon: Skeleton Acolyte;0;0;4;0;0;f;f;0;1;f;Placeholder;
+$Summon: Skeleton Warrior;0;0;0;0;0;f;f;0;2;f;Placeholder;
+$Summon: Gremlin Brawler;3;0;0;0;0;f;f;0;1;f;Summons a Gremlin Brawler with 2/2.;
+$Summon: Scorchpid Lavawalker;3;0;2;0;0;f;f;0;0;f;Summons a Scorchpid Lavawalker with 2/2.;
+$Summon: Scorchpid Drone;3;0;2;0;0;f;f;0;0;f;Summons a Scorchpid Drone with 1/2.;
+$Summon: Scorchpid Ashcrawler;3;0;2;0;0;f;f;0;1;f;Summons a Scorchpid Ashcrawler with 3/3.;
+$Summon: Gremlin Engineer;3;0;3;0;0;f;f;0;0;f;Summons a Gremlin Engineer with 1/2.;
+$Summon: Scorchpid Magmaburster;3;0;4;0;0;f;f;0;1;f;Summons a Scorchpid Magmaburster with 2/4.;
+$Summon: Mechanical Gremlin;3;0;1;0;0;f;f;0;0;f;Summons a Mechanical Gremlin with 0/1.;
+$Summon: Master Gremlin;3;0;2;0;0;f;f;0;2;f;Summons a Master Gremlin with 1/3;
+$Summon: Bargor Stomper;0;0;2;0;0;f;f;0;0;f;Calls upon the spirit of the ferocious Fetish Zij, binding it to the caster's will.;
+$Summon: Bargor Pulverizer;0;0;3;0;0;f;f;0;0;f;Summon this ancient being to launch your Fetish Zij into weapons of utter mayhem!;
+$Summon: Bargor Chieftain;0;0;2;0;0;f;f;0;1;f;The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living;
+$Summon: Bargor Maimer;0;0;3;0;0;f;f;0;1;f;Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.;
+$Comet;3;0;2;0;1;f;t;0;0;t;Call down a boulder of molten fury upon the selected target.;
+[minions];16
+$Bargor Maimer;0;4;4;0;f;f;f;f;f;f;MAIM (Passive) – Every time the Bargor Maimer hits a creature, that creature will be knocked out (cannot get up) until it’s debuff is manually removed (WP cost).;
+$Scorchpid Lavawalker;3;2;2;0;f;t;f;f;f;f;The lavawalker loses 1/1 after each successfull attack or block.;
+$Scorchpid Drone;3;1;2;0;f;f;f;f;f;f;The drone loses 1 AP for each successfull attack or block, but gains 1 HP in return.;
+$Scorchpid Ashcrawler;3;3;3;0;f;t;f;f;f;f;The ashcrawler loses 1 HP after each successfull attack or block.;
+$Scorchpid Magmaburster;3;2;4;0;f;t;f;f;f;f;The magmaburster loses 1 HP after each successfull attack or block, also has the Interchange ability which swaps the Magmaburster's attack with health values.;
+$Skeleton Footsoldier;0;2;1;0;f;f;f;f;f;f;Placeholder;
+$Skeleton Mage;0;2;2;0;f;f;f;f;f;f;Skeleton Mage can cast Tombquake - Remove selected creature from target graveyard.;
+$Skeleton Acolyte;0;2;3;0;f;f;f;f;f;f;Animate Dead - Resurrect target Skeleton creature from own graveyard. The resurrected Skeleton has it's stats modified by -1/0.;
+$Skeleton Warrior;0;3;4;0;f;f;f;f;f;f;Placeholder;
+$Master Gremlin;3;1;3;0;f;f;f;f;f;f;CREATE MECHANICAL GREMLIN – Summons a Mechanical Gremlin onto the battlefield;
+$Gremlin Engineer;3;1;2;0;f;f;f;f;f;f;PASSIVE - all friendly Mechanical Gremlins gain +1 to their attack.;
+$Gremlin Brawler;3;2;2;0;f;f;f;f;f;f;Placeholder;
+$Mechanical Gremlin;3;0;1;0;f;f;f;f;f;f;Placeholder;
+$Bargor Stomper;0;2;2;0;t;f;f;f;f;f;Placeholder.;
+$Bargor Pulverizer;0;3;3;0;f;f;f;t;f;f;Placeholder;
+$Bargor Chieftain;0;3;2;0;f;f;f;f;f;f;All Bargors gain +1 to their attack, and become Berserk.;
+[minion spells];0
 [talents]; 4
 $Improved Earthling;0;0;;Improve your something to genuinely impress the ladies.;
 $Bad Mojo;3;2;{"Improved Mojo"};Badass stuff.;

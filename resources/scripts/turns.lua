@@ -1,7 +1,7 @@
 local turn_number = 0
 local channels_step = 12
 -- every _cmod_ turns, a hero gains _cpt_ channels, note that 1 round is 2 turns
--- cmod: Channels Modified
+-- cmod: Channels Modifier
 local cmod = 4
 -- every _channels_step_ turns, _cpt_ increases by 1
 -- cpt: Channels Per Turn
@@ -15,7 +15,7 @@ end
 
 pixy.tick_resources = function(puppet)
   local channels = 0
-  if (turn_number % cmod == 0) then
+  if (turn_number % cmod == 0 or turn_number % cmod == 1) then
     channels = cpt
   end
 

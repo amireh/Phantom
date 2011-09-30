@@ -9,7 +9,7 @@
 
 #include "instance.hpp"
 #include "server.hpp"
-
+#include "PixyLua.h"
 #include "tolua++.h"
 
 TOLUA_API int  tolua_EServer_open (lua_State* tolua_S);
@@ -899,7 +899,7 @@ namespace Net {
         evt.setProperty("Spell", lSpell->getUID());
         evt.setProperty("C", lSpell->getCaster()->getUID());
         if (lSpell->requiresTarget())
-          evt.setProperty("T", lTarget->getUID());
+          evt.setProperty("T", lSpell->getTarget()->getUID());
 
         broadcast(evt);
       }

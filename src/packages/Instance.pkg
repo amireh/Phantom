@@ -11,4 +11,6 @@ class instance {
   void _destroy_unit @ destroy_unit(int inUID);
   void _destroy_puppet @ destroy_puppet(int inUID);
 
+  void _draw_spells @ draw_spells(int, int);
+
 }

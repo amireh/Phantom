@@ -3,9 +3,10 @@ $#include "required.h"
 
 // start the Pixy namespace and include everything inside that
 namespace Pixy {
-namespace Net {
+  $pfile "EPixyLua.pkg"
+  namespace Net {
 
-$pfile "Instance.pkg"
+  $pfile "Instance.pkg"
 
-}
+  }
 }

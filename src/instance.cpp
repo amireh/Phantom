@@ -159,6 +159,11 @@ namespace Net {
 		log_->infoStream() << "Lua is up!";
 	}
 
+  lua_State* instance::_get_lua() const
+  {
+    return lua_;
+  }
+
 	void instance::lua_log(std::string inMsg) {
 		lua_log_->infoStream() << inMsg;
 	}
@@ -258,6 +263,7 @@ namespace Net {
 	 * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 
 	void instance::bind_handlers() {
+    dispatcher_.bind(EventUID::Unassigned, this, &instance::pass_evt_to_lua);
     dispatcher_.bind(EventUID::SyncMatchPuppets, this, &instance::on_sync_match_puppets);
     dispatcher_.bind(EventUID::Ready, this, &instance::on_player_ready);
     dispatcher_.bind(EventUID::StartTurn, this, &instance::on_start_turn);
@@ -297,6 +303,26 @@ namespace Net {
 
 		started_ = true;
 	}
+
+  void instance::pass_evt_to_lua(const Event& evt)
+  {
+    // pass to lua
+
+    lua_getfield(lua_, LUA_GLOBALSINDEX, "processEvt");
+    if(!lua_isfunction(lua_, 1))
+    {
+      log_->errorStream() << "could not find Lua event processor!"
+        << " event: " << Event::_uid_to_string(evt.UID) << "#" << (int)evt.UID;
+      lua_pop(lua_,1);
+      return;
+    }
+
+    tolua_pushusertype(lua_,(void*)&evt,"Pixy::Event");
+    lua_call(lua_, 1, 1);
+    int result = lua_toboolean(lua_, lua_gettop(lua_));
+    lua_remove(lua_, lua_gettop(lua_));
+
+  }
 
 
 	void instance::subscribe(player_cptr player) {
@@ -431,13 +457,18 @@ namespace Net {
     drawn_spells_ << "\n";
 
     //~ log_->infoStream() << "sending drawn spells to Puppet " << inPuppet->getName();
-    //~ std::cout << "drawn spells:\n" << drawn_spells_.str() << "\n";
+    std::cout << "drawn spells:\n" << drawn_spells_.str() << "\n";
 
     // broadcast the data
     Event evt(EventUID::DrawSpells, EventFeedback::Ok, Event::NoFormat);
     evt.setProperty("Data", drawn_spells_.str());
     broadcast(evt);
 	}
+
+  void instance::_draw_spells(int inPuppetUID, int inNrSpells)
+  {
+    this->draw_spells(get_puppet(inPuppetUID), inNrSpells);
+  }
 
   Unit* instance::_create_unit(std::string model, Puppet& owner) {
     if (owner.getUnits().size() >= 10)
@@ -454,6 +485,8 @@ namespace Net {
 
     log_->debugStream() << "creating unit named " << model
       << ", owner now has " << owner.getUnits().size() << " units under control";
+
+    unit_->live();
 
     //unit_ = 0;
     return unit_;

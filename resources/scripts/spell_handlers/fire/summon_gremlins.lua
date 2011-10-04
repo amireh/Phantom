@@ -33,4 +33,4 @@ end
 subscribe_spell("Summon: Mechanical Gremlin", Gremlin.Mechanical)
 subscribe_spell("Summon: Gremlin Brawler", Gremlin.Brawler)
 subscribe_spell("Summon: Gremlin Engineer", Gremlin.Engineer)
-subscribe_spell("Summon: Master Gremlin", Gremlin.Warrior)
+subscribe_spell("Summon: Master Gremlin", Gremlin.Master)

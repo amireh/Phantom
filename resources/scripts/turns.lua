@@ -22,7 +22,7 @@ pixy.tick_resources = function(puppet)
   puppet:setChannels(puppet:getChannels() + channels)
   puppet:setWP(puppet:getChannels())
 
-  local evt = Pixy.Event:new(Pixy.EventUID.UpdatePuppet, Pixy.EventFeedback.Ok)
+  local evt = Pixy.Event(Pixy.EventUID.UpdatePuppet, Pixy.EventFeedback.Ok)
   evt:setProperty("UID", puppet:getUID())
   evt:setProperty("Channels", puppet:getChannels())
   evt:setProperty("WP", puppet:getWP())

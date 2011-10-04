@@ -121,6 +121,10 @@ namespace Net {
 
     void _destroy_puppet(int inUID);
 
+    lua_State* _get_lua() const;
+
+    void _draw_spells(int inPuppetUID, int inNrSpells);
+
 	protected:
 
 		void init_lua();
@@ -161,6 +165,8 @@ namespace Net {
 		/* +-+-+-+-+-+-+-+ *
 		 * EVENT HANNDLERS *
 		 * +-+-+-+-+-+-+-+ */
+
+    void pass_evt_to_lua(const Event&);
 
 		/*! \brief
 		 *	notification received from player that he's done loading

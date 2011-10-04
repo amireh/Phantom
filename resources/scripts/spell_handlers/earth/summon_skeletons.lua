@@ -1,12 +1,7 @@
-local Skeleton = {
-  Footsoldier = nil,
-  Mage = nil,
-  Acolyte = nil,
-  Warrior = nil
-}
+local Skeleton = { Soldier = nil, Mage = nil, Acolyte = nil, Warrior = nil}
 
 local create = function(inCaster, inTarget, inSpell, inName)
-	Pixy.Log("I'm summoning a Skeleton: " .. inName .. " - SPELL COST: " .. inSpell:getCostWP() .. ":" .. inSpell:getCostHP() .. ":" .. inSpell:getCostChannels())
+	Pixy.Log("I'm summoning a Skeleton: " .. inName)-- .. " - SPELL COST: " .. inSpell:getCostWP() .. ":" .. inSpell:getCostHP() .. ":" .. inSpell:getCostChannels())
   tolua.cast(inCaster, "Pixy::Puppet")
 
 	-- create the unit and broadcast it to the players
@@ -17,20 +12,21 @@ local create = function(inCaster, inTarget, inSpell, inName)
 	return true
 end
 
-Skeleton.Footsoldier = function(inCaster, inTarget, inSpell)
-  return create(inCaster, inTarget, inSpell, "Footsoldier")
+
+Skeleton.Soldier = function(inCaster, inTarget, inSpell)
+  return create(inCaster, inTarget, inSpell, "Soldier")
 end
-Skeleton.Mage = function(inCaster, inTarget, inSpell)
-  return create(inCaster, inTarget, inSpell, "Mage")
+Skeleton.Ravager = function(inCaster, inTarget, inSpell)
+  return create(inCaster, inTarget, inSpell, "Ravager")
 end
 Skeleton.Acolyte = function(inCaster, inTarget, inSpell)
   return create(inCaster, inTarget, inSpell, "Acolyte")
 end
-Skeleton.Warrior = function(inCaster, inTarget, inSpell)
-  return create(inCaster, inTarget, inSpell, "Warrior")
+Skeleton.Warlord = function(inCaster, inTarget, inSpell)
+  return create(inCaster, inTarget, inSpell, "Warlord")
 end
 
-subscribe_spell("Summon: Skeleton Footsoldier", Skeleton.Footsoldier)
-subscribe_spell("Summon: Skeleton Mage", Skeleton.Mage)
+subscribe_spell("Summon: Skeleton Soldier", Skeleton.Soldier)
+subscribe_spell("Summon: Skeleton Ravager", Skeleton.Ravager)
 subscribe_spell("Summon: Skeleton Acolyte", Skeleton.Acolyte)
-subscribe_spell("Summon: Skeleton Warrior", Skeleton.Warrior)
+subscribe_spell("Summon: Skeleton Warlord", Skeleton.Warlord)

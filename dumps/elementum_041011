@@ -1,0 +1,199 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 9.0.4
+-- Dumped by pg_dump version 9.0.4
+-- Started on 2011-10-04 16:30:29 EEST
+
+SET statement_timeout = 0;
+SET client_encoding = 'SQL_ASCII';
+SET standard_conforming_strings = off;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET escape_string_warning = off;
+
+SET search_path = public, pg_catalog;
+
+--
+-- TOC entry 1886 (class 0 OID 0)
+-- Dependencies: 1528
+-- Name: puppets_decks_seq; Type: SEQUENCE SET; Schema: public; Owner: elementum
+--
+
+SELECT pg_catalog.setval('puppets_decks_seq', 2, true);
+
+
+--
+-- TOC entry 1887 (class 0 OID 0)
+-- Dependencies: 1535
+-- Name: spells_id_seq; Type: SEQUENCE SET; Schema: public; Owner: elementum
+--
+
+SELECT pg_catalog.setval('spells_id_seq', 9, true);
+
+
+--
+-- TOC entry 1888 (class 0 OID 0)
+-- Dependencies: 1537
+-- Name: talents_id_seq; Type: SEQUENCE SET; Schema: public; Owner: elementum
+--
+
+SELECT pg_catalog.setval('talents_id_seq', 4, true);
+
+
+--
+-- TOC entry 1875 (class 0 OID 16587)
+-- Dependencies: 1527
+-- Data for Name: accounts; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY accounts (username, password, is_online, created_at, last_login_at) FROM stdin;
+Nobody	fb2dd88be61ca18fe651d52d728f6e79	f	2011-09-17 13:39:54.613612	\N
+Kandie	fb2dd88be61ca18fe651d52d728f6e79	t	2011-06-17 22:48:09.616636	2011-10-04 16:10:21.897248
+Sugarfly	fb2dd88be61ca18fe651d52d728f6e79	f	2011-06-17 22:13:08.989745	2011-10-04 16:10:32.638485
+\.
+
+
+--
+-- TOC entry 1876 (class 0 OID 16597)
+-- Dependencies: 1529
+-- Data for Name: decks; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY decks (puppet, use_count, name, spells) FROM stdin;
+Batata	0	Fire Template 1	{"Summon: Gremlin Brawler","Summon: Gremlin Brawler","Summon: Mechanical Gremlin","Summon: Mechanical Gremlin","Summon: Gremlin Engineer","Summon: Gremlin Engineer","Summon: Master Gremlin","Summon: Master Gremlin","Summon: Mechanical Gremlin","Summon: Mechanical Gremlin","Summon: Gremlin Brawler","Summon: Gremlin Brawler","Summon: Gremlin Engineer","Summon: Gremlin Engineer","Summon: Master Gremlin","Summon: Master Gremlin"}
+Nobody	0	Fire Template 1	{"Summon: Gremlin Brawler","Summon: Gremlin Brawler","Summon: Mechanical Gremlin","Summon: Mechanical Gremlin","Summon: Gremlin Engineer","Summon: Gremlin Engineer","Summon: Master Gremlin","Summon: Master Gremlin","Summon: Mechanical Gremlin","Summon: Mechanical Gremlin","Summon: Gremlin Brawler","Summon: Gremlin Brawler","Summon: Gremlin Engineer","Summon: Gremlin Engineer","Summon: Master Gremlin","Summon: Master Gremlin"}
+Cranberry	0	Earth Template 1	{"Bone Armor","Locust Swarm","Summon: Skeleton Ravager","Locust Swarm","Sudden Craven","Summon: Skeleton Soldier","Summon: Skeleton Soldier","Chains of Command","Summon: Skeleton Ravager","Summon: Skeleton Warlord","Summon: Skeleton Ravager","Chains of Command","Sudden Craven","Bone Harvest","Summon: Skeleton Acolyte","Summon: Skeleton Acolyte"}
+Nobody	0	Earth Template 1	{"Bone Armor","Locust Swarm","Summon: Skeleton Ravager","Locust Swarm","Sudden Craven","Summon: Skeleton Soldier","Summon: Skeleton Soldier","Chains of Command","Summon: Skeleton Ravager","Summon: Skeleton Warlord","Summon: Skeleton Ravager","Chains of Command","Sudden Craven","Bone Harvest","Summon: Skeleton Acolyte","Summon: Skeleton Acolyte"}
+\.
+
+
+--
+-- TOC entry 1881 (class 0 OID 16650)
+-- Dependencies: 1534
+-- Data for Name: races; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY races (id, description) FROM stdin;
+0	Earth
+1	Air
+2	Water
+3	Fire
+\.
+
+
+--
+-- TOC entry 1880 (class 0 OID 16640)
+-- Dependencies: 1533 1875 1881
+-- Data for Name: puppets; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY puppets (name, intelligence, vitality, alignment, level, race, talents, account) FROM stdin;
+Nobody	0	0	0	1	0	\N	Nobody
+Batata	10	10	0	1	3	{""}	Sugarfly
+Cranberry	10	10	0	1	0	{""}	Kandie
+\.
+
+
+--
+-- TOC entry 1877 (class 0 OID 16611)
+-- Dependencies: 1530 1880 1880
+-- Data for Name: instances; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY instances (started_at, id, winner, loser, finished_at, winner_deck, loser_deck) FROM stdin;
+\.
+
+
+--
+-- TOC entry 1879 (class 0 OID 16624)
+-- Dependencies: 1532 1881
+-- Data for Name: minions; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY minions (name, race, upkeep, ap, hp, is_team_attacker, is_unblockable, is_restless, is_flying, description, is_trampling, has_first_strike, has_lifetap) FROM stdin;
+Bargor Maimer	0	0	4	4	f	f	f	f	MAIM (Passive) – Every time the Bargor Maimer hits a creature, that creature will be knocked out (cannot get up) until it’s debuff is manually removed (WP cost).	f	f	f
+Scorchpid Lavawalker	3	0	2	2	f	f	t	f	The lavawalker loses 1/1 after each successfull attack or block.	f	f	f
+Scorchpid Drone	3	0	1	2	f	f	f	f	The drone loses 1 AP for each successfull attack or block, but gains 1 HP in return.	f	f	f
+Scorchpid Ashcrawler	3	0	3	3	f	f	t	f	The ashcrawler loses 1 HP after each successfull attack or block.	f	f	f
+Scorchpid Magmaburster	3	0	2	4	f	f	t	f	The magmaburster loses 1 HP after each successfull attack or block, also has the Interchange ability which swaps the Magmaburster's attack with health values.	f	f	f
+Master Gremlin	3	0	1	3	f	f	f	f	CREATE MECHANICAL GREMLIN – Summons a Mechanical Gremlin onto the battlefield	f	f	f
+Gremlin Engineer	3	0	1	2	f	f	f	f	PASSIVE - all friendly Mechanical Gremlins gain +1 to their attack.	f	f	f
+Gremlin Brawler	3	0	2	2	f	f	f	f	Placeholder	f	f	f
+Mechanical Gremlin	3	0	0	1	f	f	f	f	Placeholder	f	f	f
+Bargor Stomper	0	0	2	2	f	t	f	f	Placeholder.	f	f	f
+Bargor Pulverizer	0	0	3	3	f	f	f	f	Placeholder	t	f	f
+Bargor Chieftain	0	0	3	2	f	f	f	f	All Bargors gain +1 to their attack, and become Berserk.	f	f	f
+Skeleton Ravager	0	0	2	2	f	f	f	f	Skeleton Mage can cast Tombquake - Remove selected creature from target graveyard.	f	f	f
+Skeleton Warlord	0	0	3	4	f	f	f	f	Placeholder	f	f	f
+Skeleton Soldier	0	0	2	1	f	f	f	f	Placeholder	f	f	f
+Skeleton Acolyte	0	0	2	3	f	f	f	f	Animate Dead - Resurrect target Skeleton creature from own graveyard. The resurrected Skeleton has it's stats modified by -1/0.	f	f	f
+\.
+
+
+--
+-- TOC entry 1882 (class 0 OID 16659)
+-- Dependencies: 1536 1881
+-- Data for Name: spells; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY spells (id, name, duration, cost_wp, cost_hp, aspect, is_dispellable, requires_target, phase, race, description, cost_channels, requires_enemy_target) FROM stdin;
+9	Nourish	3	3	0	1	t	f	0	0	Regenerates your puppet's HP by 3 per turn for three turns.	0	f
+10	Chains of Command	0	1	3	1	t	t	0	0	Break the target enemy minion's will, binding it to your will. Lasts until dispelled.	0	t
+11	Fartigue	2	2	0	1	t	t	0	0	Plague the target with odor unheavenly, bursting them for 2 damage points and 1 each turn for two consecutive turns.	0	t
+21	Summon: Gremlin Brawler	0	0	0	0	f	f	0	3	Summons a Gremlin Brawler with 2/2.	1	f
+16	Summon: Scorchpid Lavawalker	0	2	0	0	f	f	0	3	Summons a Scorchpid Lavawalker with 2/2.	0	f
+17	Summon: Scorchpid Drone	0	2	0	0	f	f	0	3	Summons a Scorchpid Drone with 1/2.	0	f
+18	Summon: Scorchpid Ashcrawler	0	2	0	0	f	f	0	3	Summons a Scorchpid Ashcrawler with 3/3.	1	f
+22	Summon: Gremlin Engineer	0	3	0	0	f	f	0	3	Summons a Gremlin Engineer with 1/2.	0	f
+19	Summon: Scorchpid Magmaburster	0	4	0	0	f	f	0	3	Summons a Scorchpid Magmaburster with 2/4.	1	f
+20	Summon: Mechanical Gremlin	0	1	0	0	f	f	0	3	Summons a Mechanical Gremlin with 0/1.	0	f
+23	Summon: Master Gremlin	0	2	0	0	f	f	0	3	Summons a Master Gremlin with 1/3	2	f
+1	Summon: Bargor Stomper	0	2	0	0	f	f	0	0	Calls upon the spirit of the ferocious Fetish Zij, binding it to the caster's will.	0	f
+2	Summon: Bargor Pulverizer	0	3	0	0	f	f	0	0	Summon this ancient being to launch your Fetish Zij into weapons of utter mayhem!	0	f
+3	Summon: Bargor Chieftain	0	2	0	0	f	f	0	0	The most ancient of the Fetish line, Playmakers rise and rest to raise their fallen brethren Zij from death into living	1	f
+4	Summon: Bargor Maimer	0	3	0	0	f	f	0	0	Devoid of all sanity, the Herdkeeper's existence can turn the tides of battle by tainting his enemies.	1	f
+8	Comet	0	2	0	1	f	t	0	3	Call down a boulder of molten fury upon the selected target.	0	t
+12	Summon: Skeleton Soldier	0	2	0	0	f	f	0	0	Placeholder	0	f
+13	Summon: Skeleton Ravager	0	3	0	0	f	f	0	0	Placeholder	0	f
+24	Sudden Craven	0	2	0	1	f	f	0	0	Sacrifice 1 channel, draw 2 random spells.	1	f
+14	Summon: Skeleton Acolyte	0	4	0	0	f	f	0	0	Placeholder	0	f
+15	Summon: Skeleton Warlord	0	1	0	0	f	f	0	0	Placeholder	1	f
+25	Death Exchange	0	4	0	1	f	t	0	0	Sacrifice creature, gain 2 sources.	0	f
+27	Locust Swarm	120	3	0	1	f	t	0	0	Unleash a swarm of rotten locusts to desecrate the target, causing it to lose 1 HP every turn.	0	t
+28	Bone Harvest	0	5	0	1	f	f	0	0	Leech off the lifelessness ofyour army, granting your hero 1 HP per every Skeleton you control.	0	f
+26	Bone Armor	120	2	0	1	f	t	0	0	Coat the target with the bones of the dead, granting it 1/1 to its stats.	0	f
+\.
+
+
+--
+-- TOC entry 1878 (class 0 OID 16618)
+-- Dependencies: 1531 1879 1882
+-- Data for Name: minion_spells; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY minion_spells (minion, spell) FROM stdin;
+\.
+
+
+--
+-- TOC entry 1883 (class 0 OID 16676)
+-- Dependencies: 1538
+-- Data for Name: talents; Type: TABLE DATA; Schema: public; Owner: elementum
+--
+
+COPY talents (name, race, tier, prereqs, id, description) FROM stdin;
+Improved Earthling	0	0	\N	0	Improve your something to genuinely impress the ladies.
+Bad Mojo	3	2	{"Improved Mojo"}	2	Badass stuff.
+Improved Mojo	3	1	\N	1	Improve your mojo.
+Very Bad Mojo	3	2	{"Improved Mojo","Bad Mojo"}	4	The baddest stuff.
+\.
+
+
+-- Completed on 2011-10-04 16:30:29 EEST
+
+--
+-- PostgreSQL database dump complete
+--
+

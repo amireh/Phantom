@@ -15,8 +15,25 @@ local UnitHandlers = {
   }
 }
 
+local EventHandlers = {
+  DrawSpell = {},
+  DropSpell = {}
+}
+
 local function unit_subscribed(name, state)
   return UnitHandlers[name] and UnitHandlers[name][state]
+end
+
+pixy.onDrawSpell = function(puppet, spell)
+  for handler in list_iter(EventHandlers.DrawSpell) do
+    handler(puppet, spell)
+  end
+end
+
+pixy.onDropSpell = function(puppet, spell)
+  for handler in list_iter(EventHandlers.DropSpell) do
+    handler(puppet, spell)
+  end
 end
 
 Dispatchers.onEntityAlive = function(e)
@@ -70,6 +87,16 @@ end
 
 function unsubscribe_generic_unit_handler(inState, inMethod)
   removeByValue(UnitHandlers.Generic[inState], inMethod)
+end
+
+function subscribe_event_handler(inEvent, inMethod)
+  assert(EventHandlers[inEvent])
+  table.insert(EventHandlers[inEvent], inMethod)
+end
+
+function unsubscribe_event_handler(inEvent, inMethod)
+  assert(EventHandlers[inEvent])
+  removeByValue(EventHandlers[inEvent], inMethod)
 end
 
 function process_spell(inCaster, inTarget, inSpell, inEvt)

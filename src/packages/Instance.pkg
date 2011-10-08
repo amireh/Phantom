@@ -12,5 +12,6 @@ class instance {
   void _destroy_puppet @ destroy_puppet(int inUID);
 
   void _draw_spells @ draw_spells(int, int);
+  Pixy::Puppet* get_enemy(int inUID);
 
 }

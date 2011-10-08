@@ -207,6 +207,14 @@ namespace Net {
     throw invalid_uid(std::string("couldn't find a puppet with uid " + stringify(inUID)));
     //return NULL;
   }
+  Puppet* instance::get_enemy(int inUID)
+  {
+    for (auto puppet : puppets_)
+      if (puppet->getUID() != inUID)
+        return puppet.get();
+
+    throw invalid_uid(std::string("couldn't find enemy puppet of " + stringify(inUID)));
+  }
 
   Spell* instance::get_spell(int inUID) {
     Spell* spell=0;
@@ -430,6 +438,8 @@ namespace Net {
 			lSpell->setUID(generate_uid());
 			inPuppet->attachSpell(lSpell);
 
+      pass_to_lua("onDrawSpell", 2, "Pixy::Puppet", inPuppet.get(), "Pixy::Spell", lSpell);
+
       drawn_spells_ << lSpell->getName() << ";" << lSpell->getUID() << ";";
 
       lSpell = 0;
@@ -450,6 +460,9 @@ namespace Net {
     while (inPuppet->nrSpellsInHand() > mMaxSpellsInHand) {
       Spell* lSpell = lHand.front();
       drawn_spells_ << lSpell->getUID() << ";";
+
+      pass_to_lua("onDropSpell", 2, "Pixy::Puppet", inPuppet.get(), "Pixy::Spell", lSpell);
+
       inPuppet->detachSpell(lSpell->getUID());
 
       lSpell = 0;
@@ -497,8 +510,8 @@ namespace Net {
     {
       try {
         unit = puppet->getUnit(inUID);
-        death_list_.push_back(unit);
-        //strand_.post([&, puppet, inUID]() -> void {
+        //~ return death_list_.push_back(unit);
+        strand_.post([&, puppet, inUID]() -> void {
           puppet->detachUnit(inUID);
 
           // tell clients to remove this unit
@@ -507,7 +520,7 @@ namespace Net {
           broadcast(e);
 
           log_->debugStream() << "unit with UID " << inUID << " is dead";
-        //});
+        });
         return;
       } catch (invalid_uid& e) { }
     }
@@ -606,17 +619,6 @@ namespace Net {
       */
     }
 
-    // remove all expired buffs
-    {
-      std::vector<Spell*> expired;
-      for (auto buff : active_puppet_->getBuffs())
-        if (buff->hasExpired()) {
-          expired.push_back(buff);
-        }
-      for (auto expired_spell : expired)
-        active_puppet_->detachBuff(expired_spell->getUID());
-    }
-
     // apply all the buffs on the puppet and its units
     log_->debugStream()
     << "active puppet " << active_puppet_->getName() << " has "
@@ -627,7 +629,7 @@ namespace Net {
       log_->debugStream() << "applying buff " << buff->getName() << "#" << buff->getUID();
       lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 
-      tolua_pushusertype(lua_,(void*)active_puppet_.get(),"Pixy::Puppet");
+      tolua_pushusertype(lua_,(void*)buff->getCaster(),"Pixy::Puppet");
       tolua_pushusertype(lua_,(void*)buff->getTarget(),"Pixy::Entity");
       tolua_pushusertype(lua_,(void*)buff,"Pixy::Spell");
       tolua_pushusertype(lua_,(void*)&dummy,"Pixy::Event");
@@ -653,6 +655,17 @@ namespace Net {
         death_list_.push_back((Unit*)buff->getTarget());
     }
 
+    // remove all expired buffs
+    {
+      std::vector<Spell*> expired;
+      for (auto buff : active_puppet_->getBuffs())
+        if (buff->hasExpired()) {
+          expired.push_back(buff);
+        }
+      for (auto expired_spell : expired)
+        active_puppet_->detachBuff(expired_spell->getUID());
+    }
+
     // kill all the units in the death list
     for (auto unit : death_list_)
       _destroy_unit(unit);
@@ -663,21 +676,12 @@ namespace Net {
     // un-rest all the player's resting units
     for (auto unit : active_puppet_->getUnits()) {
       unit->getUp();
-      // remove all expired buffs
-      {
-        std::vector<Spell*> expired;
-        for (auto buff : unit->getBuffs())
-          if (buff->hasExpired()) {
-            expired.push_back(buff);
-          }
-        for (auto expired_spell : expired)
-          unit->detachBuff(expired_spell->getUID());
-      }
+
       // apply the active buffs
       for (auto buff : unit->getBuffs()) {
         lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 
-        tolua_pushusertype(lua_,(void*)unit,"Pixy::Unit");
+        tolua_pushusertype(lua_,(void*)buff->getCaster(),"Pixy::Unit");
         tolua_pushusertype(lua_,(void*)buff->getTarget(),"Pixy::Entity");
         tolua_pushusertype(lua_,(void*)buff,"Pixy::Spell");
         tolua_pushusertype(lua_,(void*)&dummy,"Pixy::Event");
@@ -701,6 +705,18 @@ namespace Net {
         else if (unit->isDead())
           death_list_.push_back(unit);
       }
+
+      // remove all expired buffs
+      {
+        std::vector<Spell*> expired;
+        for (auto buff : unit->getBuffs())
+          if (buff->hasExpired()) {
+            expired.push_back(buff);
+          }
+        for (auto expired_spell : expired)
+          unit->detachBuff(expired_spell->getUID());
+      }
+
     }
 
     // again, kill all the units in the death list
@@ -889,6 +905,13 @@ namespace Net {
       }
     }
 
+    // prepare the response event
+    Event resp(inEvt);
+    resp.setProperty("Spell", lSpell->getUID());
+    resp.setProperty("C", lSpell->getCaster()->getUID());
+    if (lSpell->requiresTarget())
+      resp.setProperty("T", lSpell->getTarget()->getUID());
+
 		// dispatch to Lua
 		lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 		if(!lua_isfunction(lua_, 1))
@@ -928,13 +951,8 @@ namespace Net {
 
       // broadcast the CastSpell event to players, confirming it
       {
-        Event evt(EventUID::CastSpell, EventFeedback::Ok);
-        evt.setProperty("Spell", lSpell->getUID());
-        evt.setProperty("C", lSpell->getCaster()->getUID());
-        if (lSpell->requiresTarget())
-          evt.setProperty("T", lSpell->getTarget()->getUID());
-
-        broadcast(evt);
+        resp.Feedback = EventFeedback::Ok;
+        broadcast(resp);
       }
 
       // update the caster stats and broadcast them
@@ -982,8 +1000,9 @@ namespace Net {
 
     } else {
       // we reject the request
-      Event e(inEvt);
-      return reject(e);
+      //Event e(inEvt);
+      resp.Feedback = EventFeedback::Error;
+      return reject(resp);
     }
 
     lSpell = 0;

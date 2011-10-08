@@ -125,6 +125,8 @@ namespace Net {
 
     void _draw_spells(int inPuppetUID, int inNrSpells);
 
+    Puppet* get_enemy(int inUID);
+
 	protected:
 
 		void init_lua();

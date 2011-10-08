@@ -7,9 +7,11 @@ local Gremlin = {
 
 local create = function(inCaster, inTarget, inSpell, inName)
 	Pixy.Log("I'm summoning a Gremlin: " .. inName .. " - SPELL COST: " .. inSpell:getCostWP() .. ":" .. inSpell:getCostHP() .. ":" .. inSpell:getCostChannels())
-  tolua.cast(inCaster, "Pixy::Puppet")
+  --tolua.cast(inCaster, "Pixy::Puppet")
 
 	-- create the unit and broadcast it to the players
+  assert(inCaster)
+  print("Caster's name : " .. inCaster:getName())
   local unit = Instance:create_unit(inName, inCaster)
 
   if (not unit) then return false end

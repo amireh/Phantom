@@ -33,7 +33,7 @@ local process_buff = function(inCaster, inTarget, inSpell)
 end
 
 local process = function(inCaster, inTarget, inSpell)
-  tolua.cast(inCaster, "Pixy::Puppet")
+  --tolua.cast(inCaster, "Pixy::Puppet")
 
   if (inTarget:hasBuff(inSpell:getUID())) then
     return process_buff(inCaster, inTarget, inSpell)

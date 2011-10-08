@@ -1,6 +1,6 @@
 /*
 ** Lua binding: EServer
-** Generated automatically by tolua++-1.0.92 on Mon Oct  3 14:57:03 2011.
+** Generated automatically by tolua++-1.0.92 on Sat Oct  8 14:42:43 2011.
 */
 
 #ifndef __cplusplus
@@ -1073,6 +1073,40 @@ static int tolua_EServer_Pixy_Net_instance_draw_spells00(lua_State* tolua_S)
 }
 #endif //#ifndef TOLUA_DISABLE
 
+/* method: get_enemy of class  Pixy::Net::instance */
+#ifndef TOLUA_DISABLE_tolua_EServer_Pixy_Net_instance_get_enemy00
+static int tolua_EServer_Pixy_Net_instance_get_enemy00(lua_State* tolua_S)
+{
+#ifndef TOLUA_RELEASE
+ tolua_Error tolua_err;
+ if (
+     !tolua_isusertype(tolua_S,1,"Pixy::Net::instance",0,&tolua_err) ||
+     !tolua_isnumber(tolua_S,2,0,&tolua_err) ||
+     !tolua_isnoobj(tolua_S,3,&tolua_err)
+ )
+  goto tolua_lerror;
+ else
+#endif
+ {
+  Pixy::Net::instance* self = (Pixy::Net::instance*)  tolua_tousertype(tolua_S,1,0);
+  int inUID = ((int)  tolua_tonumber(tolua_S,2,0));
+#ifndef TOLUA_RELEASE
+  if (!self) tolua_error(tolua_S,"invalid 'self' in function 'get_enemy'", NULL);
+#endif
+  {
+   Pixy::Puppet* tolua_ret = (Pixy::Puppet*)  self->get_enemy(inUID);
+    tolua_pushusertype(tolua_S,(void*)tolua_ret,"Pixy::Puppet");
+  }
+ }
+ return 1;
+#ifndef TOLUA_RELEASE
+ tolua_lerror:
+ tolua_error(tolua_S,"#ferror in function 'get_enemy'.",&tolua_err);
+ return 0;
+#endif
+}
+#endif //#ifndef TOLUA_DISABLE
+
 /* Open function */
 TOLUA_API int tolua_EServer_open (lua_State* tolua_S)
 {
@@ -1165,6 +1199,7 @@ TOLUA_API int tolua_EServer_open (lua_State* tolua_S)
      tolua_function(tolua_S,"destroy_unit",tolua_EServer_Pixy_Net_instance_destroy_unit00);
      tolua_function(tolua_S,"destroy_puppet",tolua_EServer_Pixy_Net_instance_destroy_puppet00);
      tolua_function(tolua_S,"draw_spells",tolua_EServer_Pixy_Net_instance_draw_spells00);
+     tolua_function(tolua_S,"get_enemy",tolua_EServer_Pixy_Net_instance_get_enemy00);
     tolua_endmodule(tolua_S);
    tolua_endmodule(tolua_S);
   tolua_endmodule(tolua_S);

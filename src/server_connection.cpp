@@ -66,6 +66,8 @@ namespace Net {
       // log out from DB
       server::singleton().get_dbmgr().logout((std::string)player_->get_username());
     }
+
+    std::cout << "Connection: stopped\n";
   }
 
   void connection::handle_inbound() {

@@ -1,4 +1,4 @@
-[spells];26
+[spells];30
 $Chains of Command;0;0;1;3;1;t;t;0;0;t;Break the target enemy minion's will, binding it to your will. Lasts until dispelled.;
 $Fartigue;0;2;2;0;1;t;t;0;0;t;Plague the target with odor unheavenly, bursting them for 2 damage points and 1 each turn for two consecutive turns.;
 $Summon: Gremlin Brawler;3;0;0;0;0;f;f;0;1;f;Summons a Gremlin Brawler with 2/2.;
@@ -20,11 +20,15 @@ $Sudden Craven;0;0;2;0;1;f;f;0;1;f;Sacrifice 1 channel, draw 2 random spells.;
 $Summon: Skeleton Acolyte;0;0;4;0;0;f;f;0;0;f;Placeholder;
 $Summon: Skeleton Warlord;0;0;1;0;0;f;f;0;1;f;Placeholder;
 $Death Exchange;0;0;4;0;1;f;t;0;0;f;Sacrifice creature, gain 2 sources.;
-$Locust Swarm;0;120;3;0;1;f;t;0;0;t;Unleash a swarm of rotten locusts to desecrate the target, causing it to lose 1 HP every turn.;
+$Harlequin Curse;0;0;3;0;1;f;t;0;0;t;Target creature will die, can only be cast on creatures just summoned.;
+$Gloom;0;3;0;0;1;t;f;0;0;f;Increase the cost of all non-summoning spells cast by your opponent by 2 WP.;
 $Bone Harvest;0;0;5;0;1;f;f;0;0;f;Leech off the lifelessness ofyour army, granting your hero 1 HP per every Skeleton you control.;
-$Bone Armor;0;120;2;0;1;f;t;0;0;f;Coat the target with the bones of the dead, granting it 1/1 to its stats.;
 $Nourish;0;3;1;0;1;t;f;0;0;f;Regenerates your puppet's HP by 3 per turn for three turns.;
-$Gloom;0;3;0;0;1;f;f;0;0;f;Increase the cost of all non-summoning spells cast by your opponent by 2 WP.;
+$Locust Swarm;0;120;3;0;1;t;t;0;0;t;Unleash a swarm of rotten locusts to desecrate the target, causing it to lose 1 HP every turn.;
+$Bone Armor;0;120;2;0;1;t;t;0;0;f;Coat the target with the bones of the dead, granting it 1/1 to its stats.;
+$Shadow Dance;0;1;6;0;1;t;f;0;0;f;All creatures under your control gain +1 to their attack until the end of turn.;
+$Stygian Disease;0;120;5;0;1;t;t;0;0;t;Owner of target creature suffers 1 damage every turn. Target can no longer use abilities.;
+$Kiss of Death;0;0;5;0;1;f;f;0;0;f;Target hero suffers 2 damage, you gain 3 health;
 [minions];16
 $Bargor Maimer;0;4;4;0;f;f;f;f;f;f;MAIM (Passive) – Every time the Bargor Maimer hits a creature, that creature will be knocked out (cannot get up) until it’s debuff is manually removed (WP cost).;
 $Scorchpid Lavawalker;3;2;2;0;f;t;f;f;f;f;The lavawalker loses 1/1 after each successfull attack or block.;

@@ -511,7 +511,7 @@ namespace Net {
       try {
         unit = puppet->getUnit(inUID);
         //~ return death_list_.push_back(unit);
-        strand_.post([&, puppet, inUID]() -> void {
+        strand_.post([&, unit, puppet, inUID]() -> void {
           puppet->detachUnit(inUID);
 
           // tell clients to remove this unit

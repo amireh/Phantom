@@ -1,13 +1,29 @@
 local turns_left = 0
-local enemy = nil
+--~ local enemy = nil
 -- Gloom increases the cost of all non-summoning spells by 2
 local _cost = 2
+local has_buff = function(puppet)
+  local exporter = Pixy.SpellListExporter()
+  exporter:export(Instance, puppet:getBuffs(), "Pixy::Spell", "_Temp_")
+  for spell in list_iter(_Temp_) do
+    if spell:getName() == "Gloom" then
+      _Temp_ = nil
+      return true
+    end
+  end
+
+  _Temp_ = nil
+  return false
+end
+
 local increase_cost = function(puppet, spell)
   -- gloom only affects non-summoning spells
   if spell:getName():find("Summon") then return true end
 
   Pixy.Log("checking whether spell " .. spell:getName() .. " owned by " .. spell:getCaster():getName() .. " needs to be WP cost increased")
-  if spell:getCaster():getUID() == enemy:getUID() then
+
+  if has_buff(puppet) then
+  --if spell:getCaster():getUID() == puppet:getUID() then
     spell:setCostWP(spell:getCostWP() + _cost)
     Pixy.Log("increasing cost of spell "
       .. spell:getName() .. "#" .. spell:getUID()
@@ -21,7 +37,8 @@ end
 local revert_cost = function(puppet, spell)
   -- gloom only affects non-summoning spells
   if spell:getName():find("Summon") then return true end
-  if spell:getCaster():getUID() == enemy:getUID() then
+  --~ if spell:getCaster():getUID() == enemy:getUID() then
+  if has_buff(puppet) then
     spell:setCostWP(spell:getCostWP() - _cost)
     Pixy.Log("restoring cost of spell "
       .. spell:getName() .. "#" .. spell:getUID()
@@ -38,7 +55,7 @@ local apply_buff = function(inCaster, inTarget, inSpell)
   -- get the opponent puppet
   Pixy.Log("Applying " .. inSpell:getName() .. " on " .. inTarget:getName() .. "#" .. inTarget:getUID() .. " by " .. inCaster:getName() .. "!")
 
-  enemy = inTarget
+  --~ enemy = inTarget
   -- attach the buff to the puppet
   inTarget:attachBuff(inSpell)
   turns_left = inSpell:getDuration()
@@ -48,7 +65,7 @@ local apply_buff = function(inCaster, inTarget, inSpell)
   local exporter = Pixy.SpellListExporter()
   exporter:export(Instance, inTarget:getHand(), "Pixy::Spell", "Temp")
   for spell in list_iter(Temp) do
-    increase_cost(nil, spell)
+    increase_cost(inTarget, spell)
   end
   Temp = nil
 
@@ -69,7 +86,7 @@ local process_buff = function(inCaster, inTarget, inSpell)
     local exporter = Pixy.SpellListExporter()
     exporter:export(Instance, inTarget:getHand(), "Pixy::Spell", "Temp")
     for spell in list_iter(Temp) do
-      revert_cost(nil, spell)
+      revert_cost(inTarget:getTarget(), spell)
     end
     Temp = nil
     unsubscribe_event_handler("DrawSpell", increase_cost)

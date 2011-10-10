@@ -284,6 +284,8 @@ namespace Net {
     dispatcher_.bind(EventUID::CancelBlock, this, &instance::on_cancel_block);
     dispatcher_.bind(EventUID::EndBlockPhase, this, &instance::on_end_block_phase);
     dispatcher_.bind(EventUID::BattleOver, this, &instance::on_battle_over);
+
+    dispatcher_.bind(EventUID::PlayerDroppedOut, this, &instance::on_remove_player);
 	}
 
 	/* +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ *
@@ -390,8 +392,25 @@ namespace Net {
 	  return ++uid_generator_;
 	}
 
-  void instance::on_dropout(player_cptr player) {
-    strand_.post(
+  void instance::on_dropout(player_cptr in_player) {
+    // remove the dead player
+    ((Player*)in_player.get())->leave_instance();
+    players_.remove(in_player);
+    in_player.reset();
+    strand_.post([&]() {
+
+      // drop the other players out
+      Event e(EventUID::PlayerDroppedOut);
+      broadcast(e);
+      for (auto player_ : players_)
+      {
+        ((Player*)player_.get())->leave_instance();
+        player_.reset();
+      }
+      players_.clear();
+      server::singleton()._shutdown_instance(shared_from_this());
+    });
+    /*strand_.post(
       [&, player]() {
       log_->infoStream()
         << "detaching player "
@@ -408,9 +427,18 @@ namespace Net {
 
       if (players_.empty())
         server::singleton()._shutdown_instance(shared_from_this());
-    });
+      else {
+        Event e(EventUID::PlayerDroppedOut);
+        broadcast(e);
+      }
+    });*/
 
     running_ = false;
+  }
+
+  void instance::on_remove_player(const Event& e)
+  {
+    on_dropout(get_sender(e));
   }
 
   /*

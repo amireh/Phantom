@@ -207,6 +207,8 @@ namespace Net {
     void on_end_block_phase(const Event&);
     void on_battle_over(const Event&);
 
+    void on_remove_player(const Event&);
+
 	private:
 
     void finish(puppet_ptr);

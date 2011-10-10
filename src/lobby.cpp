@@ -67,6 +67,7 @@ namespace Net {
 
 	void lobby::bind_handlers() {
     dispatcher_.bind(EventUID::ListRooms, this, &lobby::on_list_rooms);
+    dispatcher_.bind(EventUID::LeaveLobby, this, &lobby::on_leave_lobby);
     dispatcher_.bind(EventUID::JoinRoom, this, &lobby::on_join_room);
     dispatcher_.bind(EventUID::LeaveRoom, this, &lobby::on_leave_room);
     dispatcher_.bind(EventUID::SendMessage, this, &lobby::on_send_message);
@@ -83,10 +84,7 @@ namespace Net {
   }
 
   void lobby::on_dropout(player_cptr player) {
-    for (auto room_ : rooms_)
-      room_.second->remove(player);
-
-    ((Player*)player.get())->set_in_lobby(false);
+    this->remove(player);
   }
 
   room_ptr lobby::open_room(const std::string& name, bool is_permanent)
@@ -107,8 +105,24 @@ namespace Net {
 
   void lobby::enlist(player_ptr player)
   {
+    if (player->is_in_lobby())
+      return;
+
     rooms_["General"]->enlist(player);
     player->set_in_lobby(true);
+  }
+
+  void lobby::remove(player_cptr player)
+  {
+    for (auto room_ : rooms_)
+      room_.second->remove(player);
+
+    ((Player*)player.get())->set_in_lobby(false);
+  }
+
+  void lobby::on_leave_lobby(const Event& e)
+  {
+    strand_.post([&, e]() -> void { this->remove(e.Sender); });
   }
 
   void lobby::on_list_rooms(const Event&)

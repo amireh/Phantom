@@ -48,6 +48,8 @@ namespace Net {
      */
     void enlist(player_ptr);
 
+    void remove(player_cptr);
+
     void on_dropout(player_cptr);
 
     void enqueue(const Event&, player_cptr);
@@ -61,6 +63,12 @@ namespace Net {
 	protected:
 
     room_ptr open_room(std::string const& name, bool is_permanent=false);
+
+    /*!
+     * @brief
+     * Detaches the player from all joined rooms.
+     */
+    void on_leave_lobby(const Event&);
 
     /*!
      * @brief

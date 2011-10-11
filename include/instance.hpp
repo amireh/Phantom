@@ -14,6 +14,7 @@
 #include "player.hpp"
 #include "dispatcher.hpp"
 #include "sresource_manager.hpp"
+#include "room.hpp"
 #include "Spell.h"
 #include "Event.hpp"
 
@@ -170,6 +171,12 @@ namespace Net {
 
     void pass_evt_to_lua(const Event&);
 
+    /*!
+     * @brief
+     * Delivers Event.Msg to all the instance players
+     */
+    void on_send_message(const Event&);
+
 		/*! \brief
 		 *	notification received from player that he's done loading
 		 *	once both players send this message, teh game will start by
@@ -208,6 +215,8 @@ namespace Net {
     void on_battle_over(const Event&);
 
     void on_remove_player(const Event&);
+
+    room_ptr chat_room_;
 
 	private:
 

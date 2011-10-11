@@ -58,7 +58,7 @@ namespace Net {
      * @brief
      * Closes a room. This is called internally in room::remove()
      */
-    void close_room(room_ptr);
+    void _close_room(room_ptr);
 
 	protected:
 

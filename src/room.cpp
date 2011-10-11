@@ -164,7 +164,7 @@ namespace Net {
         // close this room down if there are no players left and it's
         // not a permanent one
         if (!is_permanent() && players_.empty())
-          return server::singleton().get_lobby()->close_room(shared_from_this());
+          return server::singleton().get_lobby()->_close_room(shared_from_this());
 
         Event e(EventUID::LeftRoom, EventFeedback::Ok);
         e.setProperty("R", name_);

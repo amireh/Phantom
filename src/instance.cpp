@@ -28,7 +28,8 @@ namespace Net {
     waiting_puppet_(),
     waiting_player_(),
     winner_(),
-    rmgr_(server::singleton().get_resmgr())
+    rmgr_(server::singleton().get_resmgr()),
+    chat_room_()
   {
 		uuid_ = boost::uuids::random_generator()();
 
@@ -47,6 +48,9 @@ namespace Net {
 
 		log_ = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "instance");
 		lua_log_ = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "Lua");
+
+    // start the private chat room
+    chat_room_.reset(new room(strand_.get_io_service(), boost::lexical_cast<std::string>(uuid_), false));
 
 		// register our players
     //for (auto player : in_players)
@@ -72,6 +76,8 @@ namespace Net {
     waiting_player_.reset();
 
     players_.clear();
+
+    chat_room_.reset();
 
 		if (lua_)
 			lua_close(lua_);
@@ -99,6 +105,9 @@ namespace Net {
 
 		// prepare the puppets stream that will be sent on SyncPuppetData
 		create_puppets();
+
+    for (auto player : players_)
+      chat_room_->enlist(player);
 
 		log_->infoStream() << "a match is beginning";
 
@@ -272,6 +281,9 @@ namespace Net {
 
 	void instance::bind_handlers() {
     dispatcher_.bind(EventUID::Unassigned, this, &instance::pass_evt_to_lua);
+
+    dispatcher_.bind(EventUID::SendMessage, this, &instance::on_send_message);
+
     dispatcher_.bind(EventUID::SyncMatchPuppets, this, &instance::on_sync_match_puppets);
     dispatcher_.bind(EventUID::Ready, this, &instance::on_player_ready);
     dispatcher_.bind(EventUID::StartTurn, this, &instance::on_start_turn);
@@ -391,6 +403,12 @@ namespace Net {
 	const int instance::generate_uid() {
 	  return ++uid_generator_;
 	}
+
+  void instance::on_send_message(const Event& e)
+  {
+    assert(e.hasProperty("M"));
+    chat_room_->relay(e.getProperty("M"), e.Sender);
+  }
 
   void instance::on_dropout(player_cptr in_player) {
     // remove the dead player

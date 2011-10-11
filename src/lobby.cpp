@@ -94,7 +94,7 @@ namespace Net {
     return new_room_;
   }
 
-  void lobby::close_room(room_ptr in_room)
+  void lobby::_close_room(room_ptr in_room)
   {
     strand_.post([&, in_room]() -> void { rooms_.erase(in_room->get_name()); });
   }

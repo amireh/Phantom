@@ -315,8 +315,15 @@ namespace Net {
     waiting_player_ = get_player(waiting_puppet_);
 
     log_->debugStream() << "it's now " << active_player_->get_username() << "'s turn";
-		Event evt(EventUID::StartTurn);
-		send(active_player_, evt);
+		{
+      Event evt(EventUID::StartTurn);
+      send(active_player_, evt);
+    }
+		{
+      Event evt(EventUID::TurnStarted);
+      evt.setProperty("P", active_puppet_->getUID());
+      send(waiting_player_, evt);
+    }
 
     for (auto puppet : puppets_) {
       puppet->live();
@@ -639,17 +646,6 @@ namespace Net {
 
     pass_to_lua("tick_turn", 0);
 
-    // send to all players except the active one
-    Event evt(EventUID::TurnStarted);
-    evt.setProperty("Puppet", stringify(active_puppet_->getUID()));
-
-    for (auto player : players_) {
-      if (player == active_player_)
-        continue;
-
-      send(player, evt);
-    }
-
     // update the hero's channels and willpower
     {
       pass_to_lua("tick_resources", 1, "Pixy::Puppet", active_puppet_.get());
@@ -839,6 +835,18 @@ namespace Net {
     waiting_player_ = active_player_;
     active_player_ = get_player(active_puppet_);
 
+    // send to all players except the active one
+    Event _turn_started(EventUID::TurnStarted);
+    _turn_started.setProperty("P", stringify(active_puppet_->getUID()));
+    for (auto player : players_) {
+      if (player != active_player_) {
+        log_->infoStream() << "\tinforming " <<
+          player->get_puppet()->getName() <<
+          player->get_puppet()->getUID() << " that their turn is not active";
+        send(player, _turn_started);
+      }
+    }
+
 		log_->debugStream()
 		<< "starting " << active_puppet_->getName() << "'s turn ";
 
@@ -873,6 +881,19 @@ namespace Net {
     assert(lCaster && lSpell);
     log_->debugStream() << "spell cast: " << lSpell->getUID() << "#" << lSpell->getName();
     log_->debugStream() << "caster: " << lCaster->getUID() << "#" << lCaster->getName();
+
+    // allow only ALL or CASTING spells to be cast by active puppets
+    if (lSpell->getPhase() != BLOCKING && active_puppet_->getUID() != lCaster->getOwner()->getUID())
+    {
+      Event evt(inEvt);
+		  return reject(evt);
+    }
+    // blocking spells can only be cast when the active is not the caster
+    else if (lSpell->getPhase() == BLOCKING && active_puppet_->getUID() == lCaster->getOwner()->getUID())
+    {
+      Event evt(inEvt);
+		  return reject(evt);
+    }
 
     Entity* lTarget = 0;
     if (inEvt.hasProperty("T")) {

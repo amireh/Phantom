@@ -76,6 +76,7 @@ local apply_buff = function(inCaster, inTarget, inSpell)
 end
 
 local process_buff = function(inCaster, inTarget, inSpell)
+  inTarget = inSpell:getTarget()
 
   turns_left = turns_left - 1
   -- remove spell when the duration expires
@@ -86,7 +87,7 @@ local process_buff = function(inCaster, inTarget, inSpell)
     local exporter = Pixy.SpellListExporter()
     exporter:export(Instance, inTarget:getHand(), "Pixy::Spell", "Temp")
     for spell in list_iter(Temp) do
-      revert_cost(inTarget:getTarget(), spell)
+      revert_cost(inTarget, spell)
     end
     Temp = nil
     unsubscribe_event_handler("DrawSpell", increase_cost)

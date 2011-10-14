@@ -9,10 +9,10 @@
 
 #include "instance.hpp"
 #include "server.hpp"
-#include "PixyLua.h"
+//#include "PixyLua.h"
 #include "tolua++.h"
 
-TOLUA_API int  tolua_EServer_open (lua_State* tolua_S);
+TOLUA_API int  tolua_Phantom_open (lua_State* tolua_S);
 TOLUA_API int  tolua_EShared_open (lua_State* tolua_S);
 TOLUA_API int  tolua_Event_open (lua_State* tolua_S);
 
@@ -130,7 +130,7 @@ namespace Net {
 		lua_ = lua_open();
 
 		luaL_openlibs(lua_);
-		tolua_EServer_open(lua_);
+		tolua_Phantom_open(lua_);
     tolua_EShared_open(lua_);
     tolua_Event_open(lua_);
 

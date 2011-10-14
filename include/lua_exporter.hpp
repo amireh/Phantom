@@ -1,7 +1,7 @@
-#ifndef H_EPixyLua_H
-#define H_EPixyLua_H
+#ifndef H_LuaExporter_H
+#define H_LuaExporter_H
 
-#include "PixyLua.h"
+#include "BaseLuaExporter.h"
 #include "instance.hpp"
 
 typedef std::vector<Pixy::Unit*> UnitVec;
@@ -16,19 +16,19 @@ namespace Pixy {
   using std::list;
 
   template <typename T>
-  class ELuaExporter : public LuaExporter<T>
+  class lua_exporter : public BaseLuaExporter<T>
   {
     TOLUA_TEMPLATE_BIND(T)
 
     public:
-      ELuaExporter() { }
-      virtual ~ELuaExporter() {}
+      lua_exporter() { }
+      virtual ~lua_exporter() {}
 
 
       inline virtual void
       __export(Net::instance* in_instance, T const& container, const char* data_type, const char* out_table)
       {
-        LuaExporter<T>::__export(in_instance->_get_lua(), container, data_type, out_table);
+        BaseLuaExporter<T>::__export(in_instance->_get_lua(), container, data_type, out_table);
       }
   };
 }

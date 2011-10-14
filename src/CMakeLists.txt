@@ -15,18 +15,25 @@ SET(Project_SRCS
 
 
 # generate lua bindings
+
+SET(LuaProject "${PROJECT_NAME}Lua")
+SET(LuaGeneratedSrc "lua_${PROJECT_NAME}.cpp")
+SET(LuaGeneratedSrcPathRel "packages/${LuaGeneratedSrc}")
+SET(LuaGeneratedSrcPath "${CMAKE_CURRENT_SOURCE_DIR}/${LuaGeneratedSrcPathRel}")
+
 ADD_CUSTOM_COMMAND(
-  OUTPUT packages/lua_EServer.cpp
+  OUTPUT ${LuaGeneratedSrcPathRel}
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/packages/parser.sh ${CMAKE_CURRENT_SOURCE_DIR}/packages
-  "Generating lua bindings"
-)
+  "Generating Phantom lua bindings")
+LIST(APPEND Project_SRCS ${LuaGeneratedSrcPath})
 
 # the executable
-ADD_EXECUTABLE(Server ${Project_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/packages/lua_EServer.cpp)
-SET_SOURCE_FILES_PROPERTIES(${CMAKE_CURRENT_SOURCE_DIR}/packages/lua_EServer.cpp PROPERTIES GENERATED 1)
+ADD_EXECUTABLE(${PROJECT_NAME} ${Project_SRCS})
+SET_SOURCE_FILES_PROPERTIES(${LuaGeneratedSrc} PROPERTIES GENERATED 1)
 
-ADD_CUSTOM_TARGET(EServerLua DEPENDS packages/lua_EServer.cpp )
-IF(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/packages/lua_EServer.cpp")
-  MESSAGE(STATUS "Lua bindings is not yet generated, forcing generation. Generate manually using make EServerLua")
-  ADD_DEPENDENCIES(${PROJECT_NAME} EServerLua)
+ADD_CUSTOM_TARGET(${LuaProject} DEPENDS ${LuaGeneratedSrcPathRel})
+
+IF(NOT EXISTS ${LuaGeneratedSrcPath})
+  MESSAGE(STATUS "Lua bindings are not yet generated, forcing generation. Generate manually using make ${LuaProject}")
+  ADD_DEPENDENCIES(${PROJECT_NAME} ${LuaProject})
 ENDIF()

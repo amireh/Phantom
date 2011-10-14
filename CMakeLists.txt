@@ -9,7 +9,7 @@ ENDIF()
 INCLUDE (CheckIncludeFileCXX)
 INCLUDE (CMakeDependentOption)
 
-PROJECT(PixyNet)
+PROJECT(Phantom)
 
 SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMake ${CMAKE_SOURCE_DIR}/CMake/Packages )
 

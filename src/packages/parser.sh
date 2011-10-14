@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ROOT="."
-PKG="EServer"
+PKG="Phantom"
 if [ $# -gt 0 ]; then
   ROOT=$1
 fi

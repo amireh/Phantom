@@ -1,0 +1,21 @@
+$#include "lua_exporter.hpp"
+$#include "Puppet.h"
+$#include "Unit.h"
+$#include "Spell.h"
+
+class lua_exporter : public BaseLuaExporter {
+  TOLUA_TEMPLATE_BIND(T, UnitVec, SpellVec, PuppetVec, UnitList, SpellList, PuppetList)
+
+  lua_exporter();
+  virtual ~lua_exporter();
+
+  void __export @ export(Net::instance* in_instance, T const& container, const char* data_type, const char* out_table);
+};
+
+$renaming lua_exporter<UnitVec> @ UnitVecExporter
+$renaming lua_exporter<SpellVec> @ SpellVecExporter
+$renaming lua_exporter<PuppetVec> @ PuppetVecExporter
+$renaming lua_exporter<UnitList> @ UnitListExporter
+$renaming lua_exporter<SpellList> @ SpellListExporter
+$renaming lua_exporter<PuppetList> @ PuppetListExporter
+

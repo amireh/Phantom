@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef H_PixyNet_BaseConnection_H
-#define H_PixyNet_BaseConnection_H
+#ifndef H_PixyNet_BaseServerConnection_H
+#define H_PixyNet_BaseServerConnection_H
 
 #include <vector>
 #include <iostream>

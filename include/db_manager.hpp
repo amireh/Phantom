@@ -215,13 +215,13 @@ namespace Net {
       db_result dbr = db_result::Unassigned;
 
       //pqxx::result result_;
-      std::cout << "Username: " << inUsername << "\n";
-      std::cout << "Password: " << inMD5Password << "\n";
+      //~ std::cout << "Username: " << inUsername << "\n";
+      //~ std::cout << "Password: " << inMD5Password << "\n";
       std::ostringstream _condition;
       _condition << "username='" << inUsername << "'";
       _condition << " AND password='" << inMD5Password << "'";
 
-      std::cout << "Condition: " << _condition.str() << "\n";
+      //~ std::cout << "Condition: " << _condition.str() << "\n";
 
       result_.clear();
       bool success = false;

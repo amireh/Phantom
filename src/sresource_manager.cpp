@@ -321,13 +321,13 @@ namespace Net {
   }
 
   void sresource_manager::_assign_talents(Puppet& inPuppet, std::string inTalents) {
-    mLog->debugStream() << "assigning talents to puppet " << inPuppet.getName() << ": " << inTalents;
+    //~ mLog->debugStream() << "assigning talents to puppet " << inPuppet.getName() << ": " << inTalents;
 
     inTalents = inTalents.erase(0,1).erase(inTalents.size()-2,1); // remove { }
     vector<string> names = Utility::split(inTalents,',');
     vector<string>::iterator name;
 
-    mLog->debugStream() << "\tfound " << names.size() << " talents";
+    //~ mLog->debugStream() << "\tfound " << names.size() << " talents";
     if (names.empty() || (names.size() == 1 && names.front() == "\"\""))
       return;
     for (name = names.begin(); name != names.end(); ++name) {
@@ -356,7 +356,7 @@ namespace Net {
     assert(elements.size() == 16);
     vector<string>::iterator itr;
     for (itr = elements.begin(); itr != elements.end(); ++itr) {
-      std::cout << "assigning spell to deck " << (*itr) << "\n";
+      //~ std::cout << "assigning spell to deck " << (*itr) << "\n";
       // strip out the quotes
       std::string spellname = (*itr).erase(0,1).erase((*itr).size()-2,1);
       //(*itr).pop_front();

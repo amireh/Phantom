@@ -48,6 +48,7 @@ class connection : public base_connection
 
   bool is_authentic() const;
   bool in_instance() const;
+  bool in_lobby() const;
 
   protected:
 

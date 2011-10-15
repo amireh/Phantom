@@ -143,7 +143,7 @@ void base_connection::send(const Event& evt) {
      boost::asio::placeholders::error));*/
 
     if (!ec) {
-      std::cout << " - sent " << n << "bytes (out of" << response_.size() << "b)\n";
+      std::cout << " - sent " << n << " of " << response_.size() << "b, message: " << outbound << "\n";
       response_.consume(n);
       //std::cout << " cleared response buf ( " << response_.size() << ")\n";
     } else

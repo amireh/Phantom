@@ -41,6 +41,7 @@ namespace Net {
 		std::string const& get_username() const;
     bool is_online() const;
     bool is_in_lobby() const;
+    bool is_in_instance() const;
 
     void send(const Event& evt) const;
     puppets_t const& get_puppets() const;
@@ -56,6 +57,7 @@ namespace Net {
 		void set_instance(instance_ptr);
     void set_online(bool);
     void set_in_lobby(bool);
+    void set_in_instance(bool);
 
     void leave_instance();
 
@@ -69,6 +71,7 @@ namespace Net {
 		string puppet_name_;
     bool online_;
     bool in_lobby_;
+    bool in_instance_;
 	};
 
   typedef boost::shared_ptr<Player> player_ptr;

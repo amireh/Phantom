@@ -71,12 +71,13 @@ namespace Net {
   }
 
   void connection::handle_inbound() {
+    //~ std::cout << "got an event " << inbound << "\n";
     if (in_instance()) {
       Event clone(inbound);
-      std::cout << "got an event from " << player_->get_username() << "\n";
       clone.Sender = player_;
       player_->get_instance()->enqueue(clone, player_);
-    } else if (is_authentic() && player_->is_in_lobby()) {
+    }
+    if (in_lobby()) {
       Event clone(inbound);
       clone.Sender = player_;
       server::singleton().get_lobby()->enqueue(clone, player_);
@@ -117,7 +118,7 @@ namespace Net {
   void connection::on_login(const Event &evt) {
     assert(!is_authentic());
 
-    std::cout << "guest wants to login\n";
+    std::cout << "Guest wants to login:\n";
 
     if (!evt.hasProperty("Username") || !evt.hasProperty("Password"))
       return;
@@ -127,8 +128,8 @@ namespace Net {
     std::string _md5pw = MD5((unsigned char*)evt.getProperty("Password").c_str()).hex_digest();
     // __DEBUG__
     std::cout
-      << "authenticating user " << inUsername
-      << " with password " << " hashed " << _md5pw << "\n";
+      << "\tAuthenticating user {" << inUsername
+      << "} with password " << _md5pw << "\n";
 
     // log the player in and send feedback when received
     db_manager& dbmgr = server::singleton().get_dbmgr();
@@ -139,9 +140,9 @@ namespace Net {
         Event evt(EventUID::Login);
         if (rc != db_result::Ok) {
           evt.Feedback = EventFeedback::Error;
-          std::cout << "client " << username << " couldnt log in\n";
+          std::cout << "\tGuest " << username << " couldnt log in\n";
         } else {
-          std::cout << "client " << username << " logged in successfully\n";
+          std::cout << "\tGuest " << username << " logged in successfully\n";
           evt.Feedback = EventFeedback::Ok;
           promote(username);
         }
@@ -202,10 +203,10 @@ namespace Net {
             false /* don't do a full dump */);
           e.setProperty("Data",  out.str());
 
-          std::cout
-            << "sent puppet data to " << player_->get_username()
-            << ", total of " << player_->get_puppets().size() << " puppets: stream is\n";
-          std::cout << out.str() << "\n";
+          //~ std::cout
+            //~ << "sent puppet data to " << player_->get_username()
+            //~ << ", total of " << player_->get_puppets().size() << " puppets: stream is\n";
+          //~ std::cout << out.str() << "\n";
         }
         send(e);
       }
@@ -373,7 +374,11 @@ namespace Net {
   }
 
   bool connection::in_instance() const {
-    return (player_ && player_->get_instance());
+    return (is_authentic() && player_->is_in_instance());
+  }
+
+  bool connection::in_lobby() const {
+    return (is_authentic() && player_->is_in_lobby());
   }
 
   bool connection::is_authentic() const {

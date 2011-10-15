@@ -19,7 +19,8 @@ namespace Net {
     puppet_(),
     instance_(),
     online_(false),
-    in_lobby_(false)
+    in_lobby_(false),
+    in_instance_(false)
   {
 		std::cout << "Player is alive!\n";
 	}
@@ -33,11 +34,13 @@ namespace Net {
     conn_ = 0;
     online_ = false;
     in_lobby_ = false;
+    in_instance_ = false;
 		std::cout << "Player is destroyed!\n";
 	}
 
 	void Player::set_instance(instance_ptr inInstance) {
 		instance_ = inInstance;
+    set_in_instance(true);
 	}
 
 	void Player::set_puppet(puppet_ptr inPuppet) {
@@ -49,6 +52,9 @@ namespace Net {
   }
   void Player::set_in_lobby(bool inF) {
     in_lobby_ = inF;
+  }
+  void Player::set_in_instance(bool inF) {
+    in_instance_ = inF;
   }
 
 
@@ -76,9 +82,13 @@ namespace Net {
   bool Player::is_in_lobby() const {
     return in_lobby_;
   }
+  bool Player::is_in_instance() const {
+    return in_instance_;
+  }
 
   void Player::leave_instance() {
     instance_.reset();
+    set_in_instance(false);
   }
 
   bool Player::operator==(const Player& rhs) const

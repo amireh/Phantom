@@ -81,7 +81,7 @@ namespace Net {
 
 		assert(conn_ != NULL);
 
-    std::cout << "connected to PostgreSQL database!\n";
+    log_->infoStream() << "connected to PostgreSQL database!\n";
 
 		return false;
 	}
@@ -119,7 +119,7 @@ namespace Net {
 		if (!inOrder.empty())
       _sql << " ORDER BY " << inOrder << " ASC";
 
-    std::cout << "SQL condition: " << inCondition << "\n";
+    //~ std::cout << "SQL condition: " << inCondition << "\n";
 
 		// execute query and save result
 		return exec_query(_sql.str().c_str(), &out);

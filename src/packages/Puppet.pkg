@@ -1,0 +1,86 @@
+$#include "Puppet.h"
+  class Unit;
+	class Puppet : public Pixy::Entity, public Pixy::BasePuppet
+	{
+  public:
+    typedef Unit unit_t;
+    typedef Pixy::BaseDeck deck_t;
+    typedef std::list<unit_t*> units_t;
+    typedef std::list<Pixy::Talent const*> talents_t;
+    typedef std::list<deck_t*> decks_t;
+
+		//! Sets BasePuppet's experience
+		void setExperience(long inExperience);
+		//! Sets BasePuppet's level based on his Experience
+		void setLevel(int inLevel);
+		//! Sets BasePuppet's Intelligence, which improves the effectiveness of Spells
+		void setIntelligence(int inInt);
+		//! Sets BasePuppet's Vitality, which defines Health
+		void setVitality(int inVt);
+		//! Sets BasePuppet's Willpower, which is used for casting spells
+		void setWP(int inWP);
+		void setChannels(int);
+		void setWins(int inWins);
+		void setLosses(int inLosses);
+
+		//! Retrieves BasePuppet's experience
+		long getExperience() const;
+		//! Retrieves BasePuppet's level
+		int getLevel() const;
+		//! Retrieves BasePuppet's strength
+		//~ int getStrength();
+		//! Retrieves BasePuppet's intelligence
+		int getIntelligence() const;
+		//! Retrieves BasePuppet's vitality
+		int getVitality() const;
+		//! Retrieves BasePuppet's Willpower
+		int getWP() const;
+		int getChannels() const;
+		int getWins() const;
+		int getLosses() const;
+
+    /*!
+     * @brief
+     * Puppets do not own the Talent objects, but merely reference them. When
+     * a Puppet object is destroyed, it does NOT destroy the attached talents.
+     **/
+    virtual void attachTalent(Pixy::Talent const* inTalent);
+    virtual void detachTalent(std::string const& inName);
+    virtual Pixy::BasePuppet::talents_t const& getTalents() const;
+    virtual bool hasTalent(std::string const& inName) const;
+
+    /*!
+     * @brief
+     * Adds the given deck to this puppet's list of decks. This is normally used
+     * in the Lobby/Intro state where the player can modify and update her decks.
+     *
+     * Puppets take ownership of the attached decks, and when destroyed they will
+     * also destroy the Deck objects.
+     **/
+    virtual void attachDeck(deck_t* inDeck);
+
+    /*!
+     * @brief
+     * Destroys the deck with the given name.
+     *
+     * @note
+     * Decks are name-unique per Puppet.
+     **/
+    virtual void detachDeck(std::string const& inName);
+
+    /*!
+     * @brief
+     * This is the deck the Puppet is using for the battle instance.
+     **/
+		virtual void _setDeck(deck_t* inDeck);
+		virtual Pixy::BasePuppet::deck_t* getDeck();
+    virtual Pixy::BasePuppet::decks_t const& getDecks() const;
+    virtual bool hasDeck(std::string const& inName) const;
+    virtual int nrDecks() const;
+
+		virtual void attachUnit(Pixy::Puppet::unit_t* inUnit);
+		virtual void detachUnit(int inUID, bool inRemove = true);
+		virtual Pixy::Puppet::unit_t* getUnit(int inUID);
+		virtual Pixy::Puppet::units_t const& getUnits();
+
+	};

@@ -217,8 +217,8 @@ namespace Net {
   {
     assert(is_authentic() && e.hasProperty("Name") && e.hasProperty("Race"));
     Puppet* tmp = new Puppet();
-    tmp->setName(e.getProperty("Name"));
-    tmp->setRace(raceFromString(e.getProperty("Race")));
+    tmp->_setName(e.getProperty("Name"));
+    tmp->_setRace(raceFromString(e.getProperty("Race")));
     tmp->setIntelligence(10);
     tmp->setVitality(10);
 
@@ -348,7 +348,7 @@ namespace Net {
       }
     }
 
-    player_->get_puppet()->setDeck(deck);
+    player_->get_puppet()->_setDeck(deck);
     server::singleton().get_match_finder().join_queue(player_);
 
    /* std::string puppet_name = evt.getProperty("Puppet");
@@ -538,7 +538,7 @@ namespace Net {
 
       // remove the deck from the player's list
       {
-        player_->get_puppet()->removeDeck(name_);
+        player_->get_puppet()->detachDeck(name_);
       }
 
       Event ok(EventUID::RemoveDeck, EventFeedback::Ok);

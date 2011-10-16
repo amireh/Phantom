@@ -7,15 +7,387 @@ using std::string;
 namespace Pixy {
 namespace Net {
 	sresource_manager::sresource_manager() {
-    dump_path_ = path(server::singleton().get_data_path()) / "current";
+		mLog = new log4cpp::FixedContextCategory(PIXY_LOG_CATEGORY, "ResourceMgr");
 		mLog->infoStream() << "up, dumping data to " << dump_path_;
 	}
 
 	sresource_manager::~sresource_manager() {
     //~ game_data_.Reset();
+    mLog->infoStream() << "shutting down";
+
+    for (int i=0; i < 4; ++i) {
+      while (!mSpells[i].empty()) {
+        // delete only the spells that aren't minion abilities
+        //~ if (mSpells[i].back()->getCaster() == 0)
+          delete mSpells[i].back();
+
+        mSpells[i].pop_back();
+      }
+
+      while (!mUnits[i].empty()) {
+        delete mUnits[i].back();
+        mUnits[i].pop_back();
+      }
+
+      while (!mTalents[i].empty()) {
+        delete mTalents[i].back();
+        mTalents[i].pop_back();
+      }
+    }
+
+		if (mLog) {
+			delete mLog;
+			mLog = NULL;
+		}
 	}
 
-  void sresource_manager::dump() {
+
+  void sresource_manager::populate(std::istringstream& lDump) {
+    using std::string;
+
+    //std::ifstream lDump(mDataPath.string().c_str());
+    /*std::ifstream lDump("foobar");
+    if (!lDump.is_open() || !lDump.good())
+      return;*/
+
+    try {
+      string lLine;
+      int lSection;
+      std::vector<string> lElements;
+
+      while (!lDump.eof()) {
+        getline(lDump, lLine);
+        //std::cout << lLine;
+
+        if (lLine[0] == '[') {
+
+          // find out which section it is
+          if (lLine[1] == 's') { // spells
+            lSection = 0;
+          } else if (lLine[1] == 'm' && lLine[7] == 's') { // minions
+            lSection = 1;
+          } else if (lLine[1] == 't') { // talents
+            lSection = 3;
+          } else { // minion spells
+            lSection = 2;
+          }
+          // how many entries it contains
+          int nrEntries = atoi(Utility::split(lLine, ';').back().c_str());
+
+          parseSection(lDump, lSection, nrEntries);
+        }
+
+        fflush(stdout);
+      }
+
+    } catch (std::exception& e) {
+
+    } catch (...) {
+
+    }
+
+    //lDump.close();
+  }
+
+  void sresource_manager::parseSection(std::istringstream &stream, int section, int nrEntries) {
+    using std::vector;
+    using std::string;
+
+    //~ std::cout << "-- parsing section " << section << " containing " << nrEntries << " entries\n";
+
+    vector<string> lEntries;
+
+    char c;
+    string tmp;
+    for (int i=0; i < nrEntries; ++i) {
+      //std::cout << "\n+ processing entry << " << i << ", stream @ " << stream.tellg() << " +\n";
+
+      string tmp;
+      bool fdf = false; // first delimiter found (the $)
+      bool done = false;
+      while (true) {
+        c = (char)stream.get();
+        switch (c) {
+          case '$': // start/end of entry
+            if (fdf) { // we're done
+              done = true;
+            } else {
+              fdf = true;
+              continue;
+            }
+            break;
+          case '\n': // EOL
+          case '^': // EOF
+          case '[': // end of section
+            done = true;
+            break;
+        }
+
+        if (done)
+          break;
+
+        tmp.push_back(c);
+      }
+      //~ std::cout << "parsed entry: " << tmp << "\n";
+      lEntries.push_back(tmp);
+    }
+
+    switch(section) {
+      case 0:
+        parseSpells(lEntries);
+      break;
+      case 1:
+        parseMinions(lEntries);
+      break;
+      case 2:
+        parseMinionSpells(lEntries);
+      break;
+      case 3:
+        parseTalents(lEntries);
+      break;
+    }
+  }
+
+  void sresource_manager::parseSpells(std::vector<std::string>& entries) {
+    Spell* lSpell;
+    vector<string>::iterator itr;
+    for (itr = entries.begin(); itr != entries.end(); ++itr) {
+      lSpell = new Spell();
+      vector<string> elements = Utility::split((*itr).c_str(), ';');
+      //~ std::cout << " elements size: " << elements.size() << ", registering: " << elements[0] << "\n";
+      assert(elements.size() == 12);
+
+      /* 0 name,
+      * 1 race,
+      * 2 duration,
+      * 3 cost_wp,
+      * 4 cost_hp,
+      * 5 aspect,
+      * 6 is_dispellable,
+      * 7 requires_target,
+      * 8 phase,
+      * 9 cost_channels,
+      * 10 requires_enemy_target,
+      * 11 description */
+      lSpell->setName(elements[0]);
+      lSpell->setRace(atoi(elements[1].c_str()));
+      lSpell->setDuration(atoi(elements[2].c_str()));
+      lSpell->setCostWP(atoi(elements[3].c_str()));
+      lSpell->setCostHP(atoi(elements[4].c_str()));
+      lSpell->setAspect(elements[5] == "0" ? Spell::Matter : Spell::Mind);
+      lSpell->setDispellable(elements[6] == "t");
+      lSpell->setRequiresTarget(elements[7] == "t");
+      lSpell->setPhase(atoi(elements[8].c_str()));
+      lSpell->setCostChannels(convertTo<int>(elements[9]));
+      lSpell->setRequiresEnemyTarget(elements[10] == "t");
+      lSpell->setDescription(elements[11]);
+
+
+      std::cout << "\tRegistered spell " << lSpell->getName()
+        << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"
+        << lSpell->getCostChannels() << "\n";
+
+      mSpells[lSpell->getRace()].push_back(lSpell);
+
+      lSpell = 0;
+    }
+
+    std::cout << "Registered " << entries.size() << " spells\n";
+
+  }
+  void sresource_manager::parseMinions(std::vector<std::string>& entries) {
+    Unit* lUnit;
+    vector<string>::iterator itr;
+    for (itr = entries.begin(); itr != entries.end(); ++itr) {
+      lUnit = new Unit();
+      vector<string> elements = Utility::split((*itr).c_str(), ';');
+      assert(elements.size() == 10);
+
+      lUnit->_setName(elements[0]);
+      lUnit->_setRace(atoi(elements[1].c_str()));
+      //~ lUnit->setFaction(elements[2].c_str());
+      lUnit->setBaseAP(atoi(elements[2].c_str()));
+      lUnit->setAP(atoi(elements[2].c_str()));
+      lUnit->setBaseHP(atoi(elements[3].c_str()));
+      lUnit->setHP(atoi(elements[3].c_str()));
+      //~ lUnit->setUpkeep(atoi(elements[4].c_str()));
+
+      //~ lUnit->setIsTeamAttacker(elements[6] == "t");
+      lUnit->setIsUnblockable(elements[4] == "t");
+      lUnit->setIsRestless(elements[5] == "t");
+      lUnit->setIsFlying(elements[6] == "t");
+      lUnit->setIsTrampling(elements[7] == "t");
+      lUnit->setHasFirstStrike(elements[8] == "t");
+      lUnit->setHasLifetap(elements[9] == "t");
+
+      //~ lUnit->setDescription(elements[10]);
+
+      mUnits[lUnit->getRace()].push_back(lUnit);
+
+      std::cout << "\tRegistered minion: " << lUnit->getName() << "\n";
+
+      lUnit = 0;
+    }
+
+    std::cout << "Registered " << entries.size() << " minions\n";
+  }
+  void sresource_manager::parseMinionSpells(std::vector<std::string>& entries) {
+   vector<string>::iterator itr;
+    for (itr = entries.begin(); itr != entries.end(); ++itr) {
+      vector<string> elements = Utility::split((*itr).c_str(), ';');
+      assert(elements.size() == 2);
+
+      string lUnitId = elements[0];
+      string lSpellId = elements[1];
+
+      Unit* lUnit = getModelUnit(lUnitId);
+      Spell* lSpell = getSpell(lSpellId);
+
+      assert (lUnit && lSpell);
+
+      lUnit->attachSpell(lSpell);
+
+      //std::cout << "Unit " << lUnit->getName() << " has an ability: " << lSpell->getName() << "\n";
+
+      lUnit = 0;
+      lSpell = 0;
+    }
+
+    std::cout << "Registered " << entries.size() << " minion spells\n";
+  }
+
+  void sresource_manager::parseTalents(std::vector<std::string>& entries) {
+    //std::cout << "parsing talents: " << entries.back() << "\n";
+
+    typedef std::map<Talent*, std::string> prereqs_t;
+    prereqs_t mPrereqs;
+
+    Talent* lTalent;
+    vector<string>::iterator itr;
+    for (itr = entries.begin(); itr != entries.end(); ++itr) {
+      lTalent = new Talent();
+      vector<string> elements = Utility::split((*itr).c_str(), ';');
+      assert(elements.size() == 5);
+
+      lTalent->setName(elements[0]);
+      lTalent->setRace(atoi(elements[1].c_str()));
+      lTalent->setTier(atoi(elements[2].c_str()));
+      //lUnit->setPrereqs(atoi(elements[3].c_str()));
+      lTalent->setDescription(elements[4]);
+
+      mTalents[lTalent->getRace()].push_back(lTalent);
+
+      if (elements[3] != "")
+        mPrereqs.insert(std::make_pair(lTalent, elements[3]));
+
+      std::cout << "\tRegistered talent: " << lTalent->getName() << "\n";
+
+      lTalent = 0;
+    }
+
+    // process talent dependencies
+    prereqs_t::const_iterator _itr;
+    lTalent = 0;
+    std::vector<std::string>::iterator talent_name;
+    for (_itr = mPrereqs.begin(); _itr != mPrereqs.end(); ++_itr) {
+
+      lTalent = _itr->first;
+      std::string tmp(_itr->second);
+      std::vector<std::string> names = Utility::split(tmp.erase(0,1).erase(tmp.size()-2,1), ',');// remove the { }
+
+      for (talent_name = names.begin(); talent_name != names.end(); ++talent_name) {
+        // strip out the enclosing " ", get the talent by its name, and add it as a prereq
+        lTalent->addPrereq(
+          getTalent(
+            (*talent_name).erase(0,1).erase((*talent_name).size()-2,1),
+            lTalent->getRace()));
+      }
+    }
+
+    lTalent = 0;
+
+    std::cout << "Registered " << entries.size() << " talents\n";
+  }
+
+  Spell* const sresource_manager::getSpell(std::string inName) {
+    Spell* lSpell = 0;
+    for (int i=0; i < 4; ++i) {
+      lSpell = getSpell(inName, i);
+      if (lSpell)
+        return lSpell;
+    }
+
+    std::cerr << "couldnt find a spell named " << inName << "\n";
+    return 0;
+  }
+  Spell* const sresource_manager::getSpell(std::string inName, char inRace) {
+    spells_t::const_iterator itr;
+    spells_t* lSpells = &mSpells[inRace];
+
+    for (itr = (*lSpells).begin(); itr != (*lSpells).end(); ++itr)
+      if ((*itr)->getName() == inName)
+        return new Spell((**itr));
+
+    return 0;
+  }
+  Unit* const  sresource_manager::getUnit(std::string inName) {
+    Unit* lUnit = 0;
+    for (int i=0; i < 4; ++i) {
+      lUnit = getUnit(inName, i);
+      if (lUnit)
+        return lUnit;
+    }
+
+    return 0;
+  }
+  Unit* const  sresource_manager::getUnit(std::string inName, char inRace) {
+    units_t::const_iterator itr;
+    units_t* lUnits = &mUnits[inRace];
+
+    for (itr = (*lUnits).begin(); itr != (*lUnits).end(); ++itr)
+      if ((*itr)->getName() == inName)
+        return new Unit((**itr));
+
+    std::cerr << "couldnt find a unit named " << inName << "\n";
+    return NULL;
+  }
+
+
+  Spell* sresource_manager::getModelSpell(std::string inName) {
+    spells_t::const_iterator itr;
+
+    for (int i=0; i < 4; ++i)
+      for (itr = mSpells[i].begin(); itr != mSpells[i].end(); ++itr)
+        if ((*itr)->getName() == inName)
+          return (*itr);
+
+    std::cerr << "couldnt find a spell named " << inName << "\n";
+    return NULL;
+  }
+
+  Unit* sresource_manager::getModelUnit(std::string inName) {
+    units_t::const_iterator itr;
+
+    for (int i=0; i < 4; ++i)
+      for (itr = mUnits[i].begin(); itr != mUnits[i].end(); ++itr)
+        if ((*itr)->getName() == inName)
+          return (*itr);
+
+    std::cerr << "couldnt find a unit named " << inName << "\n";
+    return NULL;
+  }
+
+  Talent const* const sresource_manager::getTalent(std::string inName, char inRace) {
+    talents_t::const_iterator itr;
+    for (itr = mTalents[inRace].begin(); itr != mTalents[inRace].end(); ++itr)
+        if ((*itr)->getName() == inName)
+          return (*itr);
+
+    mLog->errorStream() << "couldnt find a talent named " << inName << "for race " << inRace;
+    return 0;
+  }
+
+  void sresource_manager::dump(path in_path) {
     /*
      * 1) dump spells
      * 2) dump minions
@@ -23,6 +395,7 @@ namespace Net {
      * 4) dump talents
      */
 
+    dump_path_ = in_path;
     std::ofstream lDump(dump_path_.string().c_str());
     if (!lDump.is_open() || !lDump.good()) {
       mLog->errorStream() << "couldn't open resource file @ " << dump_path_.string();
@@ -68,17 +441,17 @@ namespace Net {
 
       // minions
       lRecords = txn.exec(
-        "select name,race, ap, hp, upkeep, \
+        "select name,race, ap, hp, \
         is_unblockable, is_restless, is_flying, \
-        is_trampling, has_first_strike, has_lifetap, description \
+        is_trampling, has_first_strike, has_lifetap \
         from minions");
       {
         lDump << "[minions];" << lRecords.size() << "\n";
-        int nrFields = 12;
+        int nrFields = 10;
         std::string lFields[] =
-        {"name", "race", "ap", "hp", "upkeep",
+        {"name", "race", "ap", "hp", /*"upkeep",*/
          "is_unblockable", "is_restless", "is_flying",
-         "is_trampling", "has_first_strike", "has_lifetap", "description"};
+         "is_trampling", "has_first_strike", "has_lifetap"/*,"description"*/};
         for (lRecord = lRecords.begin(); lRecord != lRecords.end(); ++lRecord) {
           lDump << "$";
           for (int i=0; i < nrFields; ++i)
@@ -287,9 +660,9 @@ namespace Net {
 
         {
           // dump puppet decks
-          const std::list<Deck const*> lDecks = inPuppet.getDecks();
+          const Puppet::decks_t lDecks = inPuppet.getDecks();
 
-          std::list<Deck const*>::const_iterator lDeck;
+          Puppet::decks_t::const_iterator lDeck;
           for (lDeck = lDecks.begin(); lDeck != lDecks.end(); ++lDeck) {
             lDeckStream
               << "$"
@@ -331,7 +704,7 @@ namespace Net {
     if (names.empty() || (names.size() == 1 && names.front() == "\"\""))
       return;
     for (name = names.begin(); name != names.end(); ++name) {
-      inPuppet.addTalent(getTalent((*name).erase(0,1).erase((*name).size()-2,1), inPuppet.getRace()));
+      inPuppet.attachTalent(getTalent((*name).erase(0,1).erase((*name).size()-2,1), inPuppet.getRace()));
     }
 
     //mLog->debugStream() << "puppet has " << inPuppet.getTalents().size() << " talents";
@@ -343,7 +716,7 @@ namespace Net {
   void sresource_manager::_assign_deck(Puppet& inPuppet, string inName, string inSpells, int inUseCount) {
     Deck* lDeck = 0;
     // does the puppet already have this deck? are we updating?
-    inPuppet.removeDeck(inName);
+    inPuppet.detachDeck(inName);
 
     lDeck = new Deck(&inPuppet);
     lDeck->setName(inName);
@@ -363,7 +736,7 @@ namespace Net {
       lDeck->_assignSpell(getSpell(spellname));
     }
 
-    inPuppet.addDeck(lDeck);
+    inPuppet.attachDeck(lDeck);
     lDeck = 0;
   }
 }

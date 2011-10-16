@@ -262,8 +262,8 @@ namespace Net {
       if (result_.empty())
         throw std::runtime_error("ERROR! Profile does not exist in database for loading!");
 
-      inPuppet.setName(result_[0]["name"].c_str());
-      inPuppet.setRace((RACE)convertTo<int>(result_[0]["race"].c_str()));
+      inPuppet._setName(result_[0]["name"].c_str());
+      inPuppet._setRace(convertTo<int>(result_[0]["race"].c_str()));
       inPuppet.setLevel(convertTo<int>(result_[0]["level"].c_str()));
       inPuppet.setIntelligence(convertTo<int>(result_[0]["intelligence"].c_str()));
       inPuppet.setVitality(convertTo<int>(result_[0]["vitality"].c_str()));

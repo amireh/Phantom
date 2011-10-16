@@ -3,7 +3,12 @@ $#include "required.h"
 
 // start the Pixy namespace and include everything inside that
 namespace Pixy {
+
   $pfile "LuaExporter.pkg"
+  $pfile "Entity.pkg"
+  $pfile "Puppet.pkg"
+  $pfile "Spell.pkg"
+
   namespace Net {
 
   $pfile "Instance.pkg"

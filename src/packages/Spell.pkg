@@ -1,0 +1,4 @@
+$#include "Spell.h"
+
+  //typedef BaseSpell Spell;
+  class Spell : public BaseSpell { };

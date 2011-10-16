@@ -7,7 +7,7 @@
 #include <map>
 
 #include "Pixy.h"
-#include "ResourceManager.h"
+//~ #include "ResourceManager.h"
 #include "Spell.h"
 #include "Deck.h"
 #include "Puppet.h"
@@ -38,57 +38,72 @@ namespace Pixy {
 namespace Net {
 
   class db_manager;
-	class sresource_manager : public ResourceManager {
+	class sresource_manager {// : public ResourceManager {
     public:
-      sresource_manager();
-      virtual ~sresource_manager();
+    typedef Spell spell_t;
+    typedef Unit unit_t;
 
-      void dump();
-      std::string const& get_game_data();
-      int get_raw_game_data_size();
+    typedef std::list<spell_t*> spells_t;
+    typedef std::list<unit_t*> units_t;
+    typedef std::list<Talent*> talents_t;
 
-      //bool deletePuppet(Player* inPlayer, RakString inName);
+    sresource_manager();
+    virtual ~sresource_manager();
 
-      //Puppet* get_puppet(Player*, std::string);
+    void dump(path);
+    std::string const& get_game_data();
+    int get_raw_game_data_size();
 
-      //std::vector<Puppet*> get_puppets(Player* inPlayer);
+    //bool deletePuppet(Player* inPlayer, RakString inName);
 
-      void puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets, bool full=true);
-      void puppets_to_stream(std::ostringstream& out, Puppet const* inPuppet, bool full=true);
+    //Puppet* get_puppet(Player*, std::string);
+
+    //std::vector<Puppet*> get_puppets(Player* inPlayer);
+
+    void puppets_to_stream(std::ostringstream& out, const list<Puppet const*>& inPuppets, bool full=true);
+    void puppets_to_stream(std::ostringstream& out, Puppet const* inPuppet, bool full=true);
+
+    void populate(std::istringstream& lDump);
+
+    spell_t* const getSpell(std::string inName);
+    spell_t* const getSpell(std::string inName, char inRace);
+    unit_t* const getUnit(std::string inName);
+    unit_t* const getUnit(std::string inName, char inRace);
+    Talent const* const getTalent(std::string inName, char inRace);
 
     protected:
-      friend class db_manager;
+    friend class db_manager;
 
-      void _assign_talents(Puppet& inPuppet, string inTalents);
-      void _assign_deck(Puppet& inPuppet, string inName, string inSpells, int inUseCount);
+    void _assign_talents(Puppet& inPuppet, string inTalents);
+    void _assign_deck(Puppet& inPuppet, string inName, string inSpells, int inUseCount);
 
-      //~ Spell* getModelSpell(std::string inName);
-      //~ Unit* getModelUnit(std::string inName);
+    spell_t* getModelSpell(std::string inName);
+    unit_t* getModelUnit(std::string inName);
+
+    void parseSection(std::istringstream &stream, int section, int nrEntries);
+    void parseSpells(std::vector<std::string>& entries);
+    void parseMinions(std::vector<std::string>& entries);
+    void parseMinionSpells(std::vector<std::string>& entries);
+    void parseTalents(std::vector<std::string>& entries);
+
+    void talentToStream(std::ostringstream& out, const Talent& inTalent);
+    //void puppetToStream(std::ostringstream& out, Puppet const& inPuppet);
+
+    log4cpp::Category	*mLog;
+
+    spells_t mSpells[4];
+    units_t mUnits[4];
+    talents_t mTalents[4];
+
+    std::string game_data_;
+    int raw_game_data_size_;
+    path dump_path_;
+
+    //DBManager* mDBMgr;
+
+    //pqxx::connection* mDBC;
 
 
-      //~ void parseSection(std::ifstream &stream, int section, int nrEntries);
-      //~ void parseSpells(std::vector<std::string>& entries);
-      //~ void parseMinions(std::vector<std::string>& entries);
-      //~ void parseMinionSpells(std::vector<std::string>& entries);
-      //~ void parseTalents(std::vector<std::string>& entries);
-
-      void talentToStream(std::ostringstream& out, const Talent& inTalent);
-      //void puppetToStream(std::ostringstream& out, Puppet const& inPuppet);
-
-
-      //log4cpp::Category	*mLog;
-
-      /*spells_t mSpells[4];
-      units_t mUnits[4];
-      talents_t mTalents[4];*/
-
-      std::string game_data_;
-      int raw_game_data_size_;
-      path dump_path_;
-
-      //DBManager* mDBMgr;
-
-      //pqxx::connection* mDBC;
   };
 }
 }

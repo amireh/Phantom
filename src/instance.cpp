@@ -314,7 +314,7 @@ namespace Net {
     waiting_puppet_ = puppets_.back();
     waiting_player_ = get_player(waiting_puppet_);
 
-    log_->debugStream() << "it's now " << active_player_->get_username() << "'s turn";
+    log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
 		{
       Event evt(EventUID::StartTurn);
       send(active_player_, evt);
@@ -367,7 +367,7 @@ namespace Net {
 		//players_.push_back(player);
     assert(player->get_puppet());
 
-    player->get_puppet()->setUID(generate_uid());
+    player->get_puppet()->_setUID(generate_uid());
     player->get_puppet()->live();
 
 		puppets_.push_back(player->get_puppet());
@@ -488,7 +488,7 @@ namespace Net {
 		for (i=0; i< inNrOfSpells; ++i) {
 			Spell* lSpell = lDeck->drawSpell();
 			// assign UID and attach to puppet
-			lSpell->setUID(generate_uid());
+			lSpell->_setUID(generate_uid());
 			inPuppet->attachSpell(lSpell);
 
       pass_to_lua("onDrawSpell", 2, "Pixy::Puppet", inPuppet.get(), "Pixy::Spell", lSpell);
@@ -502,15 +502,15 @@ namespace Net {
 
     // tell it to drop some spells if its hand is overflown
     drawn_spells_ << "[drop];";
-    int nrOverflow = inPuppet->nrSpellsInHand() - mMaxSpellsInHand;
+    int nrOverflow = inPuppet->nrSpells() - mMaxSpellsInHand;
     //~ std::cout << "Puppet has " << inPuppet->nrSpellsInHand() << " spells in hand, an overflow of= " << nrOverflow << "\n";
     if (nrOverflow > 0) {
       drawn_spells_ << nrOverflow << "\n$" << inPuppet->getUID() << ";";
     } else
       drawn_spells_ << 0;
 
-    Entity::spells_t const& lHand = inPuppet->getHand();
-    while (inPuppet->nrSpellsInHand() > mMaxSpellsInHand) {
+    Entity::spells_t const& lHand = inPuppet->getSpells();
+    while (inPuppet->nrSpells() > mMaxSpellsInHand) {
       Spell* lSpell = lHand.front();
       drawn_spells_ << lSpell->getUID() << ";";
 
@@ -542,11 +542,11 @@ namespace Net {
 
     Unit* unit_ = rmgr_.getUnit(model, owner.getRace());
     assert(unit_);
-    unit_->setUID(generate_uid());
+    unit_->_setUID(generate_uid());
     owner.attachUnit(unit_);
 
     Event evt(EventUID::CreateUnit);
-    unit_->toEvent(evt);
+    unit_->Unit::serialize(evt);
     broadcast(evt);
 
     log_->debugStream() << "creating unit named " << model
@@ -688,7 +688,7 @@ namespace Net {
         return _destroy_puppet(active_puppet_->getUID());
       }
       // if the debuff's target was a puppet and it died, game is also over
-      else if (buff->getTarget()->getRank() == Pixy::PUPPET
+      else if (buff->getTarget()->isPuppet()
         && buff->getTarget()->isDead())
       {
         return _destroy_puppet(buff->getTarget()->getUID());
@@ -737,7 +737,7 @@ namespace Net {
         // check if either the caster or the target of the buff are dead
         if (buff->getTarget()->isDead()) {
           // if the target was a puppet and it died, game is over
-          if (buff->getTarget()->getRank() == Pixy::PUPPET)
+          if (buff->getTarget()->isPuppet())
           {
             return _destroy_puppet(buff->getTarget()->getUID());
           }
@@ -883,13 +883,13 @@ namespace Net {
     log_->debugStream() << "caster: " << lCaster->getUID() << "#" << lCaster->getName();
 
     // allow only ALL or CASTING spells to be cast by active puppets
-    if (lSpell->getPhase() != BLOCKING && active_puppet_->getUID() != lCaster->getOwner()->getUID())
+    if (lSpell->getPhase() != Spell::Blocking && active_puppet_->getUID() != lCaster->getOwner()->getUID())
     {
       Event evt(inEvt);
 		  return reject(evt);
     }
     // blocking spells can only be cast when the active is not the caster
-    else if (lSpell->getPhase() == BLOCKING && active_puppet_->getUID() == lCaster->getOwner()->getUID())
+    else if (lSpell->getPhase() == Spell::Blocking && active_puppet_->getUID() == lCaster->getOwner()->getUID())
     {
       Event evt(inEvt);
 		  return reject(evt);
@@ -939,7 +939,7 @@ namespace Net {
     // verify the caster having enough resources to cast the spell
     {
       bool valid = true;
-      if (lCaster->getRank() == PUPPET)
+      if (lCaster->isPuppet())
       {
         if (lSpell->getCostWP() > ((Puppet*)lCaster)->getWP())
           valid = valid && false;
@@ -955,7 +955,7 @@ namespace Net {
 
       if (!valid)
       {
-        if (lCaster->getRank() == PUPPET)
+        if (lCaster->isPuppet())
         {
           Puppet* tCaster = (Puppet*)lCaster;
           log_->errorStream()
@@ -1027,7 +1027,7 @@ namespace Net {
         Event evt(EventUID::Unassigned, EventFeedback::Ok);
         evt.setProperty("UID", lCaster->getUID());
 
-        if (lCaster->getRank() == PUPPET)
+        if (lCaster->isPuppet())
         {
           Puppet* tCaster = static_cast<Puppet*>(lCaster);
           evt.UID = EventUID::UpdatePuppet;

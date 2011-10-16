@@ -209,7 +209,7 @@ namespace Net {
     dbmgr_->connect();
 
     resmgr_ = new sresource_manager();
-    resmgr_->dump();
+    resmgr_->dump(path(get_data_path()) / "current");
 
     match_finder_ = new match_finder(io_service_);
 

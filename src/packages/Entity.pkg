@@ -1,0 +1,18 @@
+$#include "Entity.h"
+
+  class Entity : public Pixy::BaseEntity, public Pixy::BaseCaster
+  {
+    public:
+
+    Entity();
+    Entity(const Entity& src);
+    virtual ~Entity();
+
+    virtual bool live();
+		virtual void die();
+
+		virtual void attachSpell(Pixy::BaseCaster::spell_t* inSpell);
+		virtual void attachBuff(Pixy::BaseCaster::spell_t* inSpell);
+
+
+  }; // end of class Entity

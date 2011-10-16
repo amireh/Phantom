@@ -1,5 +1,10 @@
 # add sources
 SET(Project_SRCS
+  Entity.cpp
+  Puppet.cpp
+  Unit.cpp
+  instance.cpp
+
   base_connection.cpp
   server_connection.cpp
   server.cpp
@@ -8,9 +13,9 @@ SET(Project_SRCS
   player.cpp
   sresource_manager.cpp
   match_finder.cpp
-  instance.cpp
   lobby.cpp
   room.cpp
+
 )
 
 
@@ -37,3 +42,5 @@ IF(NOT EXISTS ${LuaGeneratedSrcPath})
   MESSAGE(STATUS "Lua bindings are not yet generated, forcing generation. Generate manually using make ${LuaProject}")
   ADD_DEPENDENCIES(${PROJECT_NAME} ${LuaProject})
 ENDIF()
+
+ADD_SUBDIRECTORY(bot)

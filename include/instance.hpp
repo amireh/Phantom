@@ -118,7 +118,7 @@ namespace Net {
      * removes a unit from play, and broadcasts a RemoveUnit with the UID
      */
     void  _destroy_unit(int inUID);
-    void  _destroy_unit(Unit*);
+    //~ void  _destroy_unit(Unit*);
 
     void _destroy_puppet(int inUID);
 
@@ -269,7 +269,7 @@ namespace Net {
     typedef std::list<Unit*> attackers_t;
     attackers_t attackers_;
 
-    typedef std::vector<Unit*> death_list_t;
+    typedef std::vector<Entity*> death_list_t;
     death_list_t death_list_;
 
     // key is the attacker, value is the list of blockers in order

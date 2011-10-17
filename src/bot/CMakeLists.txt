@@ -7,9 +7,6 @@ SET(Bot_SRCS
   src/bot_main.cpp
   src/bresource_manager.cpp
   ../sresource_manager.cpp
-  ../Puppet.cpp
-  ../Unit.cpp
-  ../Entity.cpp
 )
 # the executable
 ADD_EXECUTABLE(Bot ${Bot_SRCS})

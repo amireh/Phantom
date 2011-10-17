@@ -22,7 +22,7 @@
  */
 
 #include "bot.hpp"
-#include "ResourceManager.h"
+#include "bresource_manager.hpp"
 #include "Archiver.h"
 
 using boost::asio::ip::tcp;
@@ -478,7 +478,7 @@ namespace Net {
           }
         assert(_unit);
 
-        ((Puppet*)_unit->getOwner())->detachUnit(_unit->getUID(), false /* don't delete */);
+        _unit->getOwner()->toPuppet()->detachUnit(_unit->getUID(), false /* don't delete */);
         _puppet->attachUnit(_unit);
 
         std::cout
@@ -561,13 +561,13 @@ namespace Net {
 
     _unit->deserialize(evt);
     if (_unit->isDead())
-      ((Puppet*)_unit->getOwner())->detachUnit(_unit->getUID());
+      _unit->getOwner()->toPuppet()->detachUnit(_unit->getUID());
 
   }
 
   void client::on_remove_unit(const Event& e) {
     Unit* _unit = get_unit(convertTo<int>(e.getProperty("UID")));
-    ((Puppet*)_unit->getOwner())->detachUnit(_unit->getUID());
+    _unit->getOwner()->toPuppet()->detachUnit(_unit->getUID());
   }
 
   void client::on_cancel_charge(const Event& evt) {
@@ -692,7 +692,7 @@ namespace Net {
 
     // clean up dead units
     for (auto unit : death_list_)
-      static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
+      unit->getOwner()->toPuppet()->detachUnit(unit->getUID());
 
     // clear combat temps
     death_list_.clear();

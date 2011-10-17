@@ -28,6 +28,10 @@ pixy.tick_resources = function(puppet)
   evt:setProperty("WP", puppet:getWP())
   Instance:broadcast(evt)
 
+  Pixy.Log("Testing puppet getUID(): " .. puppet:getUID())
+  Pixy.Log("Testing puppet getName(): " .. puppet:getName())
+  Pixy.Log("Testing puppet getChannels(): " .. puppet:getChannels())
+
   Pixy.Log(puppet:getName() .. "#" .. puppet:getUID() .. " now has " .. puppet:getChannels() .. " channels")
 
 end

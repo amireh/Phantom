@@ -314,7 +314,7 @@ namespace Net {
     waiting_puppet_ = puppets_.back();
     waiting_player_ = get_player(waiting_puppet_);
 
-    log_->debugStream() << "it's now " << active_puppet_->getName() << "'s turn";
+    log_->debugStream() << "it's now " << active_puppet_.get() << "'s turn";
 		{
       Event evt(EventUID::StartTurn);
       send(active_player_, evt);
@@ -484,6 +484,7 @@ namespace Net {
 		// create nrSpellsPerTurn spells from the hero's deck
 		Deck* lDeck = inPuppet->getDeck();
 
+    log_->debugStream() << "drawing spells for puppet " << inPuppet.get();
 		int i;
 		for (i=0; i< inNrOfSpells; ++i) {
 			Spell* lSpell = lDeck->drawSpell();
@@ -581,13 +582,13 @@ namespace Net {
     // can't be here
     assert(false);
   }
-  void instance::_destroy_unit(Unit* inUnit) {
+  /*void instance::_destroy_unit(Unit* inUnit) {
     // tell clients to remove this unit
     Event e(EventUID::RemoveUnit, EventFeedback::Ok);
     e.setProperty("UID", inUnit->getUID());
     broadcast(e);
-    static_cast<Puppet*>(inUnit->getOwner())->detachUnit(inUnit->getUID());
-  }
+    dynamic_cast<Puppet*>(inUnit->getOwner())->detachUnit(inUnit->getUID());
+  }*/
 
   bool instance::pass_to_lua(const char* inFunc, int argc, ...) {
     va_list argp;
@@ -694,7 +695,7 @@ namespace Net {
         return _destroy_puppet(buff->getTarget()->getUID());
       }
       else if (buff->getTarget()->isDead())
-        death_list_.push_back((Unit*)buff->getTarget());
+        death_list_.push_back(buff->getTarget());
     }
 
     // remove all expired buffs
@@ -710,7 +711,7 @@ namespace Net {
 
     // kill all the units in the death list
     for (auto unit : death_list_)
-      _destroy_unit(unit);
+      _destroy_unit(unit->getUID());
       //static_cast<Puppet*>(unit->getOwner())->detachUnit(unit->getUID());
 
     death_list_.clear();
@@ -742,7 +743,7 @@ namespace Net {
             return _destroy_puppet(buff->getTarget()->getUID());
           }
           else // just mark the unit for death
-            death_list_.push_back((Unit*)buff->getTarget());
+            death_list_.push_back(buff->getTarget());
         }
         else if (unit->isDead())
           death_list_.push_back(unit);
@@ -763,7 +764,7 @@ namespace Net {
 
     // again, kill all the units in the death list
     for (auto unit : death_list_)
-      _destroy_unit(unit);
+      _destroy_unit(unit->getUID());
       //static_cast<Puppet*>(unit->getOwner())->detachUnit(unit->getUID());
 
     death_list_.clear();
@@ -941,11 +942,11 @@ namespace Net {
       bool valid = true;
       if (lCaster->isPuppet())
       {
-        if (lSpell->getCostWP() > ((Puppet*)lCaster)->getWP())
+        if (lSpell->getCostWP() > lCaster->toPuppet()->getWP())
           valid = valid && false;
 
         // heroes can't have less than 1 channel
-        if (lSpell->getCostChannels() >= ((Puppet*)lCaster)->getChannels())
+        if (lSpell->getCostChannels() >= lCaster->toPuppet()->getChannels())
           valid = valid && false;
       }
 
@@ -957,7 +958,7 @@ namespace Net {
       {
         if (lCaster->isPuppet())
         {
-          Puppet* tCaster = (Puppet*)lCaster;
+          Puppet* tCaster = lCaster->toPuppet();
           log_->errorStream()
             << "caster" << tCaster->getUID()
             << " failed the resources requirements of the spell" << lSpell->getUID()
@@ -989,9 +990,9 @@ namespace Net {
       return reject(e);
 		}
 
-    log_->debugStream() << "\t things are looking good, passing to lua: "
-      << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"
-      << lSpell->getCostChannels();
+    //~ log_->debugStream() << "\t things are looking good, passing to lua: "
+      //~ << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"
+      //~ << lSpell->getCostChannels();
 
 		tolua_pushusertype(lua_,(void*)lCaster,"Pixy::Entity");
     tolua_pushusertype(lua_,(void*)lTarget,"Pixy::Entity");
@@ -1007,9 +1008,9 @@ namespace Net {
 
 		lua_remove(lua_, lua_gettop(lua_));
 
-    log_->debugStream() << "\t back from lua: "
-      << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"
-      << lSpell->getCostChannels();
+    //~ log_->debugStream() << "\t back from lua: "
+      //~ << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"
+      //~ << lSpell->getCostChannels();
 
     // if the spell cast was successful, we first broadcast the command to
     // the clients, then detach the spell from the caster, and finally
@@ -1029,7 +1030,7 @@ namespace Net {
 
         if (lCaster->isPuppet())
         {
-          Puppet* tCaster = static_cast<Puppet*>(lCaster);
+          Puppet* tCaster = lCaster->toPuppet();
           evt.UID = EventUID::UpdatePuppet;
           // apply WP cost, if any
           if (lSpell->getCostWP() > 0) {
@@ -1314,7 +1315,7 @@ namespace Net {
     // clean up dead units
     log_->debugStream() << death_list_.size() << " dead units";
     for (auto unit : death_list_)
-      _destroy_unit(unit);
+      _destroy_unit(unit->getUID());
       //static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
 
     // clear combat temps

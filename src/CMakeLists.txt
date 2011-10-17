@@ -1,8 +1,8 @@
 # add sources
 SET(Project_SRCS
-  Entity.cpp
-  Puppet.cpp
-  Unit.cpp
+  #Entity.cpp
+  #Puppet.cpp
+  #Unit.cpp
   instance.cpp
 
   base_connection.cpp

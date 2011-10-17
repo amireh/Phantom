@@ -270,7 +270,9 @@ namespace Net {
 
       if (full)
       {
-        server::singleton().get_resmgr()._assign_talents(inPuppet, result_[0]["talents"].c_str());
+        std::string _talents =
+          std::string(result_[0]["talents"].c_str()).erase(0,1).erase(inTalents.size()-2,1); // remove { }
+        server::singleton().get_resmgr()._assign_talents(inPuppet, _talents);
 
         // get the decks
         result_.clear();

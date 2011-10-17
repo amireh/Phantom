@@ -693,7 +693,7 @@ namespace Net {
     out << "^";
   }
 
-  void sresource_manager::_assign_talents(Puppet& inPuppet, std::string inTalents) {
+  /*void sresource_manager::_assign_talents(Puppet& inPuppet, std::string inTalents) {
     //~ mLog->debugStream() << "assigning talents to puppet " << inPuppet.getName() << ": " << inTalents;
 
     inTalents = inTalents.erase(0,1).erase(inTalents.size()-2,1); // remove { }
@@ -711,7 +711,7 @@ namespace Net {
   }
 
   void sresource_manager::talentToStream(std::ostringstream& out, const Talent& inTalent) {
-  }
+  }*/
 
   void sresource_manager::_assign_deck(Puppet& inPuppet, string inName, string inSpells, int inUseCount) {
     Deck* lDeck = 0;

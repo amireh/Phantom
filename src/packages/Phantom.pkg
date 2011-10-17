@@ -5,9 +5,9 @@ $#include "required.h"
 namespace Pixy {
 
   $pfile "LuaExporter.pkg"
-  $pfile "Entity.pkg"
-  $pfile "Puppet.pkg"
-  $pfile "Spell.pkg"
+  //$pfile "Entity.pkg"
+  //$pfile "Puppet.pkg"
+  //$pfile "Spell.pkg"
 
   namespace Net {
 

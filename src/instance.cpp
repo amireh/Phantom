@@ -563,6 +563,16 @@ namespace Net {
     {
       try {
         unit = puppet->getUnit(inUID);
+        // remove the unit from the attackers list if it was charging
+        for (auto _unit : attackers_)
+        {
+          if (_unit->getUID() == unit->getUID())
+          {
+            attackers_.remove(_unit);
+            break;
+          }
+        }
+
         //~ return death_list_.push_back(unit);
         strand_.post([&, unit, puppet, inUID]() -> void {
           puppet->detachUnit(inUID);
@@ -581,13 +591,13 @@ namespace Net {
     // can't be here
     assert(false);
   }
-  void instance::_destroy_unit(Unit* inUnit) {
+  /*void instance::_destroy_unit(Unit* inUnit) {
     // tell clients to remove this unit
     Event e(EventUID::RemoveUnit, EventFeedback::Ok);
     e.setProperty("UID", inUnit->getUID());
     broadcast(e);
     static_cast<Puppet*>(inUnit->getOwner())->detachUnit(inUnit->getUID());
-  }
+  }*/
 
   bool instance::pass_to_lua(const char* inFunc, int argc, ...) {
     va_list argp;
@@ -710,7 +720,7 @@ namespace Net {
 
     // kill all the units in the death list
     for (auto unit : death_list_)
-      _destroy_unit(unit);
+      _destroy_unit(unit->getUID());
       //static_cast<Puppet*>(unit->getOwner())->detachUnit(unit->getUID());
 
     death_list_.clear();
@@ -763,7 +773,7 @@ namespace Net {
 
     // again, kill all the units in the death list
     for (auto unit : death_list_)
-      _destroy_unit(unit);
+      _destroy_unit(unit->getUID());
       //static_cast<Puppet*>(unit->getOwner())->detachUnit(unit->getUID());
 
     death_list_.clear();
@@ -1081,6 +1091,9 @@ namespace Net {
 
   void instance::on_charge(const Event& evt) {
     // verify the existence of the unit and that its the owner's turn
+    if (!evt.hasProperty("UID"))
+      return;
+
     bool valid = true;
     Unit *_unit = 0;
     try {
@@ -1314,7 +1327,7 @@ namespace Net {
     // clean up dead units
     log_->debugStream() << death_list_.size() << " dead units";
     for (auto unit : death_list_)
-      _destroy_unit(unit);
+      _destroy_unit(unit->getUID());
       //static_cast<Puppet*>((Entity*)unit->getOwner())->detachUnit(unit->getUID());
 
     // clear combat temps

@@ -118,7 +118,7 @@ namespace Net {
      * removes a unit from play, and broadcasts a RemoveUnit with the UID
      */
     void  _destroy_unit(int inUID);
-    void  _destroy_unit(Unit*);
+    //~ void  _destroy_unit(Unit*);
 
     void _destroy_puppet(int inUID);
 

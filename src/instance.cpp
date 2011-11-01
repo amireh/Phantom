@@ -491,7 +491,7 @@ namespace Net {
 			lSpell->setUID(generate_uid());
 			inPuppet->attachSpell(lSpell);
 
-      pass_to_lua("onDrawSpell", 2, "Pixy::Puppet", inPuppet.get(), "Pixy::Spell", lSpell);
+      pass_to_lua("Spells.onDrawSpell", 2, "Pixy::Puppet", inPuppet.get(), "Pixy::Spell", lSpell);
 
       drawn_spells_ << lSpell->getName() << ";" << lSpell->getUID() << ";";
 
@@ -514,7 +514,7 @@ namespace Net {
       Spell* lSpell = lHand.front();
       drawn_spells_ << lSpell->getUID() << ";";
 
-      pass_to_lua("onDropSpell", 2, "Pixy::Puppet", inPuppet.get(), "Pixy::Spell", lSpell);
+      pass_to_lua("Spells.onDropSpell", 2, "Pixy::Puppet", inPuppet.get(), "Pixy::Spell", lSpell);
 
       inPuppet->detachSpell(lSpell->getUID());
 
@@ -654,11 +654,11 @@ namespace Net {
   void instance::on_start_turn(const Event& inEvt) {
     // start timer and shizzle
 
-    pass_to_lua("tick_turn", 0);
+    pass_to_lua("Turns.doTickTurn", 0);
 
     // update the hero's channels and willpower
     {
-      pass_to_lua("tick_resources", 1, "Pixy::Puppet", active_puppet_.get());
+      pass_to_lua("Turns.doTickResources", 1, "Pixy::Puppet", active_puppet_.get());
       /*
       active_puppet_->setChannels(active_puppet_->getChannels() + 1);
       active_puppet_->setWP(active_puppet_->getChannels());
@@ -679,7 +679,8 @@ namespace Net {
     Event dummy(EventUID::Unassigned);
     for (auto buff : active_puppet_->getBuffs()) {
       log_->debugStream() << "applying buff " << buff->getName() << "#" << buff->getUID();
-      lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
+      pass_to_lua("Spells.onProcessBuff", 1, "Pixy::Spell", buff);
+      /*lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 
       tolua_pushusertype(lua_,(void*)buff->getCaster(),"Pixy::Puppet");
       tolua_pushusertype(lua_,(void*)buff->getTarget(),"Pixy::Entity");
@@ -690,7 +691,7 @@ namespace Net {
       } catch (std::exception& e) {
         log_->errorStream() << "Lua Handler: " << e.what();
       }
-      lua_remove(lua_, lua_gettop(lua_));
+      lua_remove(lua_, lua_gettop(lua_));*/
 
       // if a puppet is dead, the game is over
       if (active_puppet_->isDead())
@@ -731,7 +732,7 @@ namespace Net {
 
       // apply the active buffs
       for (auto buff : unit->getBuffs()) {
-        lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
+        /*lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 
         tolua_pushusertype(lua_,(void*)buff->getCaster(),"Pixy::Unit");
         tolua_pushusertype(lua_,(void*)buff->getTarget(),"Pixy::Entity");
@@ -742,7 +743,8 @@ namespace Net {
         } catch (std::exception& e) {
           log_->errorStream() << "Lua Handler: " << e.what();
         }
-        lua_remove(lua_, lua_gettop(lua_));
+        lua_remove(lua_, lua_gettop(lua_));*/
+        pass_to_lua("Spells.onProcessBuff", 1, "Pixy::Spell", buff);
 
         // check if either the caster or the target of the buff are dead
         if (buff->getTarget()->isDead()) {
@@ -990,7 +992,7 @@ namespace Net {
       resp.setProperty("T", lSpell->getTarget()->getUID());
 
 		// dispatch to Lua
-		lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
+		/*lua_getfield(lua_, LUA_GLOBALSINDEX, "process_spell");
 		if(!lua_isfunction(lua_, 1))
 		{
 			log_->errorStream() << "could not find Lua event processor!";
@@ -1015,7 +1017,13 @@ namespace Net {
 
 		bool result = lua_toboolean(lua_, lua_gettop(lua_));
 
-		lua_remove(lua_, lua_gettop(lua_));
+		lua_remove(lua_, lua_gettop(lua_));*/
+    bool result = pass_to_lua(
+      "Spells.onCastSpell",
+      3,
+      "Pixy::Entity", lCaster,
+      "Pixy::Entity", lTarget,
+      "Pixy::Spell", lSpell);
 
     log_->debugStream() << "\t back from lua: "
       << ", cost: " << lSpell->getCostWP() << ":" << lSpell->getCostHP() << ":"

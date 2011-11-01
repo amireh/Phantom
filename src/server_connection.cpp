@@ -161,7 +161,8 @@ namespace Net {
 
   void connection::on_logout(const Event &evt) {
     std::cout << "client disconnecting\n";
-    strand_.post( [&]() -> void { this->stop(); });
+    this->stop();
+    //~ strand_.post( [&]() -> void { this->stop(); });
   }
 
   void connection::on_sync_game_data(const Event &evt) {

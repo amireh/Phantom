@@ -1,10 +1,3 @@
-local Gremlin = {
-  Mechanical = nil,
-  Brawler = nil,
-  Engineer = nil,
-  Master = nil
-}
-
 local create = function(inCaster, inTarget, inSpell, inName)
 	Pixy.Log("I'm summoning a Gremlin: " .. inName .. " - SPELL COST: " .. inSpell:getCostWP() .. ":" .. inSpell:getCostHP() .. ":" .. inSpell:getCostChannels())
   --tolua.cast(inCaster, "Pixy::Puppet")
@@ -19,20 +12,25 @@ local create = function(inCaster, inTarget, inSpell, inName)
 	return true
 end
 
-Gremlin.Mechanical = function(inCaster, inTarget, inSpell)
-  return create(inCaster, inTarget, inSpell, "Mechanical Gremlin")
+local Gremlin_Mechanical = {}
+function Gremlin_Mechanical:cast()
+  return create(self.Caster, self.Target, self.Spell, "Mechanical Gremlin")
 end
-Gremlin.Brawler = function(inCaster, inTarget, inSpell)
-  return create(inCaster, inTarget, inSpell, "Gremlin Brawler")
+local Gremlin_Brawler = {}
+function Gremlin_Brawler:cast()
+  return create(self.Caster, self.Target, self.Spell, "Gremlin Brawler")
 end
-Gremlin.Engineer = function(inCaster, inTarget, inSpell)
-  return create(inCaster, inTarget, inSpell, "Gremlin Engineer")
+local Gremlin_Engineer = {}
+function Gremlin_Engineer:cast()
+  return create(self.Caster, self.Target, self.Spell, "Gremlin Engineer")
 end
-Gremlin.Master = function(inCaster, inTarget, inSpell)
-  return create(inCaster, inTarget, inSpell, "Master Gremlin")
+local Gremlin_Master = {}
+function Gremlin_Master:cast()
+  return create(self.Caster, self.Target, self.Spell, "Master Gremlin")
 end
 
-subscribe_spell("Summon: Mechanical Gremlin", Gremlin.Mechanical)
-subscribe_spell("Summon: Gremlin Brawler", Gremlin.Brawler)
-subscribe_spell("Summon: Gremlin Engineer", Gremlin.Engineer)
-subscribe_spell("Summon: Master Gremlin", Gremlin.Master)
+
+subscribe_spell("Summon: Mechanical Gremlin", Gremlin_Mechanical)
+subscribe_spell("Summon: Gremlin Brawler", Gremlin_Brawler)
+subscribe_spell("Summon: Gremlin Engineer", Gremlin_Engineer)
+subscribe_spell("Summon: Master Gremlin", Gremlin_Master)

@@ -1,25 +1,28 @@
-local process = function(inCaster, inTarget, inSpell)
-	Pixy.Log("Casting Sudden Craven on " .. inCaster:getName() .. "#" .. inCaster:getUID())
-  tolua.cast(inCaster, "Pixy::Puppet")
+local BoneArmor = { IsPositive = true }
+function BoneArmor:cast()
+  self:logMe()
 
-  if (inTarget:getUID() == inCaster:getUID()
-  or inTarget:getRank() == Pixy.PUPPET
-  or inTarget:getOwner():getUID() ~= inCaster:getUID()
-  ) then
+  if self.Target:getUID() == self.Caster:getUID()
+  or self.Target:getRank() == Pixy.PUPPET
+  or self.Target:getOwner():getUID() ~= self.Caster:getUID()
+  then
     Pixy.Log("ERROR! Invalid target for Bone Armor!")
     return false
   end
 
-  inTarget:setBaseAP(inTarget:getBaseAP() + 1)
-  inTarget:setBaseHP(inTarget:getBaseHP() + 1)
+  self.Target:setBaseAP(self.Target:getBaseAP() + 1)
+  self.Target:setBaseHP(self.Target:getBaseHP() + 1)
 
   local e = Pixy.Event(Pixy.EventUID.UpdateUnit)
-  e:setProperty("UID", inTarget:getUID())
-  e:setProperty("BHP", inTarget:getBaseHP())
-  e:setProperty("BAP", inTarget:getBaseAP())
+  e:setProperty("UID", self.Target:getUID())
+  e:setProperty("BHP", self.Target:getBaseHP())
+  e:setProperty("BAP", self.Target:getBaseAP())
   Instance:broadcast(e)
 
 	return true
 end
 
-subscribe_spell("Bone Armor", process)
+function BoneArmor:process()
+end
+
+subscribe_spell("Bone Armor", BoneArmor)

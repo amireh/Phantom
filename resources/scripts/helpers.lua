@@ -44,3 +44,15 @@ function apply_spell_cost(spell, caster, evt)
     evt.setProperty("HP", caster:getHP())
   end
 end
+
+function all_words(str)
+  local t = {}
+  local b = 0
+  local e = 0
+  b,e = str:find("%w+", e+1)
+  while b do
+    table.insert(t, str:sub(b,e))
+    b,e = str:find("%w+", e+1)
+  end
+  return t
+end

@@ -24,6 +24,7 @@ function register_instance(inInstance)
 
   require "turns"
   require "dispatchers"
+  require "spell_handlers/spell_handler"
   require "bindings"
 
   require("d_lister")
@@ -58,6 +59,15 @@ function register_instance(inInstance)
 
 end
 
-function arbitrary(func, ...)
-  pixy[func](unpack(arg))
+function arbitrary(name, ...)
+  -- construct the method pointer
+  local _p = _G
+  for word in list_iter(all_words(name)) do
+    _p = _p[word]
+    if not _p then
+      return error("attempting to call an invalid arbitrary method: " .. name)
+    end
+  end
+
+  return _p(unpack(arg))
 end
